@@ -150,5 +150,20 @@ var jsproxy = {
             markerInfo.missionItems = map.uav.getMissionItems();
         }
         jsproxy.java.responseMarkerInfo(JSON.stringify(markerInfo));
+    },
+
+    requestMarkSet: function(lat, lng) {
+        map.requestMarkSet(lat, lng);
+    },
+
+    requestMarkClear: function() {
+        map.requestMarkClear();
+    },
+
+    showDestination: function () {
+
     }
+
+
+
 };

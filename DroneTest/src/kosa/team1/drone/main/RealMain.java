@@ -26,7 +26,7 @@ public class RealMain {
         // 바꾸어주면 바뀌게 될것이다.
         Camera camera0 = new Camera();
         // 하단캠
-        camera0.cameraConnect(0, 320, 240, 270);
+        camera0.cameraConnect(0, 320, 240, 90);
         // angle은 화면 돌아가는 방향
         camera0.mattConnect(
                 networkConfig.mqttBrokerConnStr,

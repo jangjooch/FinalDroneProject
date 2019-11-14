@@ -114,5 +114,22 @@ var map = {
         }
         this.roiMake = roiMake;
         this.fenceMake = fenceMake;
+    },
+
+    requestMarker : null,
+    requestMarkSet: function(lat, lng) {
+        this.requestMarker = new google.maps.Marker({
+            map: map.googlemap,
+            position: {lat: lat, lng: lng},
+            optimized: false,
+            label: {text:"R", color:"#ffffff"}
+        });
+    },
+
+    requestMarkClear: function () {
+        if (this.requestMarker != null){
+            this.requestMarker.setMap(null);
+        }
     }
+
 };

@@ -13,6 +13,8 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import kosa.team1.gcs.main.MissionRequesting.MissionRequesting;
+import org.eclipse.paho.client.mqttv3.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -69,8 +71,42 @@ public class GcsMainController implements Initializable {
 	@FXML public Button btnSouth;
 	@FXML public Button btnEast;
 	@FXML public Button btnWest;
+	@FXML public Button btnMissionReady;
+
+	// 생성자
+	public GcsMainController(){
+		fcMqttClient = null;
+	}
+
+
 
 	public Drone drone;
+
+	private boolean FCMqttClientTrigger_GPS = false;
+	private boolean FCMqttClientTrigger_Mission = false;
+
+	// 미션을 받았다면 발동하여 그때부터 드론 GPS 좌표를 전송한다.
+	private boolean WebMissionInTrigger = false;
+
+	// Service04Dialog 가 작동되었는지 확인하기 위함. 0 : 미작. 1 : 작동완료
+	private int Service04Activated = 0;
+
+	// 안드로이드와 Web 에서 전송될 토픽 /gcs/main 에 대한 subscribe 되는 클라이언트 이다.
+	private GcsMainMqtt gcsMainMqtt;
+
+	// /drone/fc/pub 에서 나오는 정보를 받아 실행 될 클라이언트
+	private FCMqttClient fcMqttClient;
+
+	private double destinationLat;
+	private double destinationLng;
+
+	// gps 전송 Thread 의 생성에 제한을 주기 위함.
+	private int gpsSendThread = 0;
+
+	// 미션 수행 완료 트리거
+	private int missionDone = 0;
+
+
 	//---------------------------------------------------------------------------------
 	@Override
 	public void initialize(URL location, ResourceBundle resources) {
@@ -101,6 +137,7 @@ public class GcsMainController implements Initializable {
 		btnSouth.setOnAction(btnSouthEventHandler);
 		btnEast.setOnAction(btnEastEventHandler);
 		btnWest.setOnAction(btnWestEventHandler);
+		btnMissionReady.setOnAction(btnMissionReadyHandler);
 
 		drone = new Drone();
 
@@ -432,6 +469,12 @@ public class GcsMainController implements Initializable {
 		public void handle(ActionEvent event) {
 			if(btnConnect.getText().equals("연결하기")) {
 				drone.connect();
+				// 드론과 연결되면 GCSMainMqtt 클리아언트 생성
+				gcsMainMqtt = new GcsMainMqtt();
+				System.out.println("GcsMainMqtt Created");
+				// /drone/fc/pub 	subscribe
+				fcMqttClient = new FCMqttClient();
+				System.out.println("FCMqttClient Created Success");
 			} else {
 				drone.disconnect();
 				btnConnect.setText("연결하기");
@@ -655,4 +698,335 @@ public class GcsMainController implements Initializable {
 			drone.flightController.sendFindControl(0, -1); //m/s
 		}
 	};
+
+	public EventHandler<ActionEvent> btnMissionReadyHandler = new EventHandler<ActionEvent>() {
+		@Override
+		public void handle(ActionEvent event) {
+			MissionRequesting missionRequesting = new MissionRequesting();
+			missionRequesting.show();
+		}
+	};
+
+	// 이벤트 핸들러 ----------------------------------------------------------------
+
+
+	public void setDestination(double getLat, double getLng){
+		this.destinationLat = getLat;
+		this.destinationLng = getLng;
+	}
+
+	// GCS 전체에 들어오는 정보를 받는 client
+	public class FCMqttClient{
+		private MqttClient client;
+
+		private String gpsLat;
+		private String gpsLng;
+
+		public FCMqttClient(){
+			while(true){
+				try {
+					client = new MqttClient("tcp://106.253.56.124:1881", MqttClient.generateClientId(), null);
+					MqttConnectOptions options = new MqttConnectOptions();
+					client.connect();
+					break;
+				}
+				catch (MqttException e){
+					System.out.println(e.getMessage());
+				}
+			}
+
+			System.out.println("FCMqttClient MQTT Connected");
+
+			client.setCallback(new MqttCallback() {
+				@Override
+				public void connectionLost(Throwable throwable) {
+					System.out.println("FCMqttClient Connection Lost");
+					reconnect();
+				}
+
+				@Override
+				public void messageArrived(String s, MqttMessage mqttMessage){
+					/*
+                    System.out.println("Message Received from Raspi total Log");
+                    String getMsg = new String(mqttMessage.getPayload());
+                    System.out.println("Received : " + getMsg);
+					*/
+					String msg = mqttMessage.toString();
+					JSONObject jsonObject = new JSONObject(msg);
+					String trigger = "HEARTBEAT";
+					if(jsonObject.get("msgid").equals(trigger)){
+						FCMqttClientTrigger_GPS = true;
+						FCMqttClientTrigger_Mission = true;
+					}
+					// Web에서 mission start에 해당하는 mqtt를 수신하여 true로 바꾸었다면
+					if(WebMissionInTrigger){
+						// 마커 생성
+						// 현재 미션 상태에 따른 MissionCurrent를 받아 목적지에 도착하면
+						// 새로운 형태의 Dialog 가 show 될 수 있도록
+						if(jsonObject.get("msgid").equals("MISSION_CURRENT")){
+							int missionSize =  GcsMain.instance.controller.flightMap.controller.getMissionItems().length();
+							System.out.println("MissionSize : " + missionSize);
+							int missionCurrentSeq = (int) jsonObject.get("seq");
+							System.out.println("MissionCurrent : " + missionCurrentSeq);
+							if(missionCurrentSeq == missionSize / 2 + 1){
+								if(Service04Activated == 0){
+									System.out.println("testing");
+									// FXML파일은 JavaFxApplication 이라는 Thread에서만
+									// 변형 및 생성이 가능하기 때문에 만약 EventHandler<ActionEvent>에서
+									// 등록 및 실행하는 것이 아니라면 불가능하다.
+									// 그렇기 때문에 임의의 위치에서 FXML을 다른 곳에서 생성 및 변형한다면
+									// Platform.runLater(new Runnable()){
+									// 		@Override
+									//		public void run(){
+									//		}
+									// }
+									// 위와 같이 run 을 이용하여 강제로 JavaFxApplicationThread 에 등록하여야 한다.
+									// 즉 Thread에 input하는 것과 같다.
+									// 근데 아랫것이 실행되면 FCMqttClient 의 connectionLost 가 발생한다.
+									System.out.println("Service04Activated 0 to 1");
+									Service04Activated = 1;
+									// 이게 수행되기 전에 한번 더 돌아서 service04가 두번 실행되는 경우가 있음
+									Platform.runLater(new Runnable() {
+										@Override
+										public void run() {
+											System.out.println("Service04 Activated");
+											//ServiceDialog04 serviceDialog04 = new ServiceDialog04();
+											//serviceDialog04.show();
+										}
+									});
+									// drone 상태를 GUIDED로 변경하기
+									drone.flightController.sendSetMode(MavJsonMessage.MAVJSON_MODE_GUIDED);
+									// 목적지 까지 한번 왔다 갔나 확인용
+									missionDone = 1;
+									System.out.println("MissionDone 0 to 1");
+								}
+							}
+						}
+						if(jsonObject.get("msgid").equals("GLOBAL_POSITION_INT")) {
+							System.out.println("--------------");
+							gpsLat = String.valueOf(jsonObject.get("currLat"));
+							gpsLng = String.valueOf(jsonObject.get("currLng"));
+							JSONObject object = new JSONObject();
+							object.put("data", "gps");
+							object.put("lat", gpsLat);
+							object.put("lng", gpsLng);
+							if(missionDone == 1){
+								System.out.println("when missionDone is 1. than clear the marker");
+								GcsMain.instance.controller.flightMap.controller.requestMarkClear();
+								// 목적지 Marker 삭제
+								missionDone = 2;
+								// 미션 종료에 따른 트리거
+							}
+							else if(missionDone == 0){
+								//  System.out.println("missionDone : " + missionDone);
+								if (gpsSendThread == 0) {
+									try {
+										new Thread() {
+											@Override
+											public void run() {
+												try {
+													System.out.println("GPS Publish Try");
+													client.publish("/web/drone/sub", object.toString().getBytes(), 0, false);
+													System.out.println("GPS Publish Done");
+													gpsSendThread = 1;
+													Thread.sleep(1000);
+													gpsSendThread = 0;
+												} catch (InterruptedException e) {
+													e.printStackTrace();
+												} catch (MqttPersistenceException e) {
+													e.printStackTrace();
+												} catch (MqttException e) {
+													e.printStackTrace();
+												}
+											}
+										}.start();
+									} catch (Exception e) {
+										System.out.println("GPS Fail");
+										System.out.println(e.getMessage());
+									}
+								}
+							}
+
+							//String latitube = String.valueOf(jsonObject.get("currLat"));
+							//String longitube = String.valueOf(jsonObject.get("currLng"));
+
+							// 한번 보냈음을 완료함을 알려줌
+							FCMqttClientTrigger_GPS = false;
+						}
+					}
+				}
+				@Override
+				public void deliveryComplete(IMqttDeliveryToken iMqttDeliveryToken) {
+
+				}
+			});
+			// SubScribe 설정
+			try {
+				client.subscribe("/drone/fc/pub");
+				System.out.println("FCMqttClient subscribe done");
+			} catch (MqttException e) {
+				System.out.println("FCMqttClient subscribe fail");
+				e.printStackTrace();
+			}
+		}
+
+		public void reconnect(){
+			while(true){
+				try {
+					client = new MqttClient("tcp://106.253.56.124:1881", MqttClient.generateClientId(), null);
+					MqttConnectOptions options = new MqttConnectOptions();
+					client.connect();
+					break;
+				}
+				catch (MqttException e){
+					System.out.println(e.getMessage());
+				}
+			}
+		}
+	}
+
+	public class GcsMainMqtt{
+
+		private MqttClient client;
+
+		public GcsMainMqtt(){
+			while(true){
+				try {
+					client = new MqttClient("tcp://106.253.56.124:1881", MqttClient.generateClientId(), null);
+					MqttConnectOptions options = new MqttConnectOptions();
+					client.connect();
+					System.out.println("GcsMainMqtt client Connect Done");
+					break;
+				}
+				catch (MqttException e){
+					System.out.println("GcsMainMqtt client Connect Error");
+					System.out.println(e.getMessage());
+				}
+			}
+			make_sub();
+		}
+
+		public void make_sub(){
+			client.setCallback(new MqttCallback() {
+				@Override
+				public void connectionLost(Throwable throwable) {
+					System.out.println("GcsMainMqtt Connection Lost");
+				}
+
+				@Override
+				public void messageArrived(String s, MqttMessage mqttMessage){
+
+					String strmsg = new String(mqttMessage.getPayload());
+					JSONObject jsonObject = new JSONObject(strmsg);
+					System.out.println("Message Arrived. MSGID : " + jsonObject.get("msgid"));
+					if(jsonObject.get("msgid").equals("missionStart")){
+						// msgid : missionStart 를 전달받으면 그 내부에
+						// 목적지 Lat, Lng 좌표를 전달받아 미션을 생성할 때, 사용할 수 있도록 한다.
+						destinationLat = (double) jsonObject.get("lat");
+						destinationLng = (double) jsonObject.get("lng");
+						// missionStart 메세지가 web 으로 부터 전달받으면 Combine01Dialog01 생성
+						if(!WebMissionInTrigger){
+							// combine01dialog 가 실행되지 않았을 때 뜨도록
+							Platform.runLater(new Runnable() {
+								@Override
+								public void run() {
+									System.out.println("CombineDialog01 Activated");
+									//CombineDialog01 combineDialog01 = new CombineDialog01();
+									//combineDialog01.show();
+								}
+							});
+							// 미션 시작에 따른 트리거 true로 변경
+						}
+						WebMissionInTrigger = true;
+					}
+				}
+
+				@Override
+				public void deliveryComplete(IMqttDeliveryToken iMqttDeliveryToken) {
+
+				}
+			});
+			try {
+				client.subscribe("/gcs/main");
+				System.out.println("GCSMainMqtt client Subscribe Success");
+			} catch (MqttException e) {
+				System.out.println("GCSMainMqtt client Subscribe Fail");
+				e.printStackTrace();
+			}
+		}
+	}
+
+	public void rootSetMethod(){
+		// 현재 미션 아이템을 가져와 여기에 마지막 부분에 미션 아이템을 추가한다.
+		JSONArray array = GcsMain.instance.controller.flightMap.controller.getMissionItems();
+		int arrSize = array.length();
+		// 목적지 seq 저장
+		JSONObject destiObject = new JSONObject();
+		destiObject.put("seq", arrSize);
+		destiObject.put("command",16);
+		destiObject.put("x", destinationLat);
+		destiObject.put("y", destinationLng);
+		destiObject.put("z", 10);
+		destiObject.put("param1", 0);
+		destiObject.put("param2", 0);
+		destiObject.put("param3", 0);
+		destiObject.put("param4", 0);
+		System.out.println("destiObject : " + destiObject.toString());
+		array.put(destiObject);
+		System.out.println("---------");
+
+		// 목적지 도착 후 delay를 주기위함
+		JSONObject delayObject = new JSONObject();
+		delayObject.put("seq", arrSize + 1);
+		delayObject.put("command",93);
+		delayObject.put("x",destinationLat);
+		delayObject.put("y",destinationLat);
+		delayObject.put("z",10);
+		delayObject.put("param1", 10); // 딜레이 되는 시간
+		delayObject.put("param2", 0);
+		delayObject.put("param3", 0);
+		delayObject.put("param4", 0);
+		System.out.println("delayObject : " + delayObject);
+		array.put(delayObject);
+		System.out.println("--------------");
+
+		// root 목적지 제외하여 변경토록 함
+		JSONArray getAdd = GcsMain.instance.controller.flightMap.controller.getMissionItems();
+		System.out.println("Will add");
+		int idx = array.length(); // 추가되기 전의 인덱스를 가져와 seq 변경
+		// int i = getAdd.length() - 1 추가되기 전의 온전한 리스트를 가져와(경로만있는)
+		// 이를 적용한다. 즉 경로만 지정된 것에서 마지막 부분을 제외하고 seq를 다시 set하고
+		// array에 추가한다.
+		for(int i = getAdd.length() - 1 ; i > 0 ; i--){
+			JSONObject object = (JSONObject) getAdd.get(i);
+			object.put("seq", idx); // 변경된 arra
+			System.out.println(object.toString());
+			idx++;
+			array.put(object);
+		}
+
+		// 마지막 root를 지우고 이를 RTL로 변경
+		JSONObject RTL = new JSONObject();
+		RTL.put("seq", array.length());
+		RTL.put("x", destinationLat);
+		RTL.put("y", destinationLng);
+		RTL.put("z", 0);
+		RTL.put("command", 20);
+		RTL.put("param1", 0);
+		RTL.put("param2", 0);
+		RTL.put("param3", 0);
+		RTL.put("param4", 0);
+		System.out.println("Last RTL : " + RTL.toString());
+		array.put(RTL);
+
+		// 이륙 추가
+
+
+		GcsMain.instance.controller.flightMap.controller.missionClear();
+		// 설계한 미션들 삭제
+		//GcsMain.instance.controller.flightMap.controller.missionMake();
+		GcsMain.instance.controller.flightMap.controller.setMissionItems_Customize(array);
+	}
+
+
 }
