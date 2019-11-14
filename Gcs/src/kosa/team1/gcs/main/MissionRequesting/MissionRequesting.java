@@ -17,7 +17,7 @@ public class MissionRequesting {
     public MissionRequesting() {
         try {
             stage = new Stage(StageStyle.UTILITY);
-            stage.initModality(Modality.WINDOW_MODAL);
+            //stage.initModality(Modality.WINDOW_MODAL);
             stage.initOwner(GcsMain.instance.primaryStage);
             BorderPane pane =
                 (BorderPane) FXMLLoader.load(getClass().getResource("Service1.fxml"));

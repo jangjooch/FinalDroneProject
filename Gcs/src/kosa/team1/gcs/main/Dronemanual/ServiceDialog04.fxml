@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+
+<BorderPane prefHeight="579.0" prefWidth="346.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="kosa.team1.gcs.main.Dronemanual.ServiceDialog04Controller">
+   <center>
+      <BorderPane prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER">
+         <top>
+            <Button fx:id="Btn_Up" minHeight="100.0" minWidth="100.0" mnemonicParsing="false" text="Up" BorderPane.alignment="CENTER" />
+         </top>
+         <left>
+            <Button fx:id="Btn_Left" minHeight="100.0" minWidth="100.0" mnemonicParsing="false" text="Left" BorderPane.alignment="CENTER" />
+         </left>
+         <right>
+            <Button fx:id="Btn_Right" minHeight="100.0" minWidth="100.0" mnemonicParsing="false" text="Right" BorderPane.alignment="CENTER" />
+         </right>
+         <bottom>
+            <Button fx:id="Btn_Down" minHeight="100.0" minWidth="100.0" mnemonicParsing="false" text="Down" BorderPane.alignment="CENTER" />
+         </bottom>
+      </BorderPane>
+   </center>
+   <bottom>
+      <HBox prefHeight="236.0" prefWidth="304.0" BorderPane.alignment="CENTER">
+         <children>
+            <Button fx:id="Btn_Drop" alignment="CENTER" contentDisplay="CENTER" minHeight="100.0" minWidth="100.0" mnemonicParsing="false" text="Drop" textAlignment="CENTER">
+               <font>
+                  <Font size="14.0" />
+               </font>
+            </Button>
+         </children></HBox>
+   </bottom>
+   <top>
+      <TextArea fx:id="textAreaAlternative" prefHeight="40.0" prefWidth="200.0" promptText="Android Control" BorderPane.alignment="CENTER_RIGHT">
+         <font>
+            <Font size="14.0" />
+         </font></TextArea>
+
+   </top>
+   <opaqueInsets>
+      <Insets />
+   </opaqueInsets>
+</BorderPane>

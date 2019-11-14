@@ -13,7 +13,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-import kosa.team1.gcs.main.MissionRequesting.MissionRequesting;
+
 import org.eclipse.paho.client.mqttv3.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -32,6 +32,8 @@ import syk.gcs.messageview.MessageView;
 //import syk.sample.gcs.network.NetworkConfig;
 import  kosa.team1.gcs.network.Drone;
 import  kosa.team1.gcs.network.NetworkConfig;
+import kosa.team1.gcs.main.Dronemanual.ServiceDialog04;
+import kosa.team1.gcs.main.MissionRequesting.MissionRequesting;
 
 import java.net.URL;
 import java.util.ResourceBundle;
@@ -71,7 +73,10 @@ public class GcsMainController implements Initializable {
 	@FXML public Button btnSouth;
 	@FXML public Button btnEast;
 	@FXML public Button btnWest;
+
+	// 상단 서비스
 	@FXML public Button btnMissionReady;
+	@FXML public Button btnRootSet;
 
 	// 생성자
 	public GcsMainController(){
@@ -88,8 +93,11 @@ public class GcsMainController implements Initializable {
 	// 미션을 받았다면 발동하여 그때부터 드론 GPS 좌표를 전송한다.
 	private boolean WebMissionInTrigger = false;
 
+	// 미션 세팅을 완료하였으면 이를 발생하여 FC에서 받은 정보를 안드로이드에 보내기 위함이다.
+	private boolean MissionUploadTrigger = false;
+
 	// Service04Dialog 가 작동되었는지 확인하기 위함. 0 : 미작. 1 : 작동완료
-	private int Service04Activated = 0;
+	private int DroneControllerTrigger = 0;
 
 	// 안드로이드와 Web 에서 전송될 토픽 /gcs/main 에 대한 subscribe 되는 클라이언트 이다.
 	private GcsMainMqtt gcsMainMqtt;
@@ -137,7 +145,10 @@ public class GcsMainController implements Initializable {
 		btnSouth.setOnAction(btnSouthEventHandler);
 		btnEast.setOnAction(btnEastEventHandler);
 		btnWest.setOnAction(btnWestEventHandler);
+
+		//
 		btnMissionReady.setOnAction(btnMissionReadyHandler);
+		btnRootSet.setOnAction(btnRootSetHandler);
 
 		drone = new Drone();
 
@@ -577,6 +588,7 @@ public class GcsMainController implements Initializable {
 				AlertDialog.showOkButton("알림", "미션 아이템 수가 부족합니다.");
 			} else {
 				drone.flightController.sendMissionUpload(jsonArray);
+				MissionUploadTrigger = true;
 			}
 		}
 	};
@@ -707,6 +719,13 @@ public class GcsMainController implements Initializable {
 		}
 	};
 
+	public EventHandler<ActionEvent> btnRootSetHandler = new EventHandler<ActionEvent>() {
+		@Override
+		public void handle(ActionEvent event) {
+			rootSetMethod();
+		}
+	};
+
 	// 이벤트 핸들러 ----------------------------------------------------------------
 
 
@@ -746,52 +765,42 @@ public class GcsMainController implements Initializable {
 
 				@Override
 				public void messageArrived(String s, MqttMessage mqttMessage){
-					/*
-                    System.out.println("Message Received from Raspi total Log");
-                    String getMsg = new String(mqttMessage.getPayload());
-                    System.out.println("Received : " + getMsg);
-					*/
-					String msg = mqttMessage.toString();
-					JSONObject jsonObject = new JSONObject(msg);
-					String trigger = "HEARTBEAT";
-					if(jsonObject.get("msgid").equals(trigger)){
-						FCMqttClientTrigger_GPS = true;
-						FCMqttClientTrigger_Mission = true;
-					}
-					// Web에서 mission start에 해당하는 mqtt를 수신하여 true로 바꾸었다면
-					if(WebMissionInTrigger){
-						// 마커 생성
-						// 현재 미션 상태에 따른 MissionCurrent를 받아 목적지에 도착하면
-						// 새로운 형태의 Dialog 가 show 될 수 있도록
+
+					// Mission 을 드론에 업로드 하였다면 진행하도록
+
+					if(MissionUploadTrigger){
+						String msg = mqttMessage.toString();
+						JSONObject jsonObject = new JSONObject(msg);
+						String trigger = "HEARTBEAT";
+						if(jsonObject.get("msgid").equals(trigger)){
+							FCMqttClientTrigger_GPS = true; // GPS 보내는 트리거용
+							FCMqttClientTrigger_Mission = true; // 이건 어디에 쓰는 지 흠
+						}
+
 						if(jsonObject.get("msgid").equals("MISSION_CURRENT")){
 							int missionSize =  GcsMain.instance.controller.flightMap.controller.getMissionItems().length();
 							System.out.println("MissionSize : " + missionSize);
 							int missionCurrentSeq = (int) jsonObject.get("seq");
 							System.out.println("MissionCurrent : " + missionCurrentSeq);
 							if(missionCurrentSeq == missionSize / 2 + 1){
-								if(Service04Activated == 0){
-									System.out.println("testing");
-									// FXML파일은 JavaFxApplication 이라는 Thread에서만
-									// 변형 및 생성이 가능하기 때문에 만약 EventHandler<ActionEvent>에서
-									// 등록 및 실행하는 것이 아니라면 불가능하다.
-									// 그렇기 때문에 임의의 위치에서 FXML을 다른 곳에서 생성 및 변형한다면
-									// Platform.runLater(new Runnable()){
-									// 		@Override
-									//		public void run(){
-									//		}
-									// }
-									// 위와 같이 run 을 이용하여 강제로 JavaFxApplicationThread 에 등록하여야 한다.
-									// 즉 Thread에 input하는 것과 같다.
-									// 근데 아랫것이 실행되면 FCMqttClient 의 connectionLost 가 발생한다.
-									System.out.println("Service04Activated 0 to 1");
-									Service04Activated = 1;
+								// 해당 공식은 미션이 수행 중에 있어 목적지에 도착한 이후 Delay 다음 시퀀스의 미션을 수행할 때 작동된다.
+								if(DroneControllerTrigger == 0){
+									System.out.println("DroneControllerTrigger 0 to 1");
+									DroneControllerTrigger = 1;
 									// 이게 수행되기 전에 한번 더 돌아서 service04가 두번 실행되는 경우가 있음
 									Platform.runLater(new Runnable() {
 										@Override
 										public void run() {
-											System.out.println("Service04 Activated");
-											//ServiceDialog04 serviceDialog04 = new ServiceDialog04();
-											//serviceDialog04.show();
+
+											try {
+												System.out.println("Service04 Activated");
+												ServiceDialog04 serviceDialog04 = new ServiceDialog04();
+												serviceDialog04.show();
+												System.out.println("Service04 Successfully Done");
+											}
+											catch (Exception e){
+												e.printStackTrace();
+											}
 										}
 									});
 									// drone 상태를 GUIDED로 변경하기
@@ -802,56 +811,59 @@ public class GcsMainController implements Initializable {
 								}
 							}
 						}
-						if(jsonObject.get("msgid").equals("GLOBAL_POSITION_INT")) {
-							System.out.println("--------------");
-							gpsLat = String.valueOf(jsonObject.get("currLat"));
-							gpsLng = String.valueOf(jsonObject.get("currLng"));
-							JSONObject object = new JSONObject();
-							object.put("data", "gps");
-							object.put("lat", gpsLat);
-							object.put("lng", gpsLng);
-							if(missionDone == 1){
-								System.out.println("when missionDone is 1. than clear the marker");
-								GcsMain.instance.controller.flightMap.controller.requestMarkClear();
-								// 목적지 Marker 삭제
-								missionDone = 2;
-								// 미션 종료에 따른 트리거
-							}
-							else if(missionDone == 0){
-								//  System.out.println("missionDone : " + missionDone);
-								if (gpsSendThread == 0) {
-									try {
-										new Thread() {
-											@Override
-											public void run() {
-												try {
-													System.out.println("GPS Publish Try");
-													client.publish("/web/drone/sub", object.toString().getBytes(), 0, false);
-													System.out.println("GPS Publish Done");
-													gpsSendThread = 1;
-													Thread.sleep(1000);
-													gpsSendThread = 0;
-												} catch (InterruptedException e) {
-													e.printStackTrace();
-												} catch (MqttPersistenceException e) {
-													e.printStackTrace();
-												} catch (MqttException e) {
-													e.printStackTrace();
+
+						// 너무 자주 GPS 정보를 보내지 않도록
+						if(FCMqttClientTrigger_GPS){
+							if(jsonObject.get("msgid").equals("GLOBAL_POSITION_INT")) {
+								System.out.println("--------------");
+								gpsLat = String.valueOf(jsonObject.get("currLat"));
+								gpsLng = String.valueOf(jsonObject.get("currLng"));
+								JSONObject object = new JSONObject();
+								object.put("data", "gps");
+								object.put("lat", gpsLat);
+								object.put("lng", gpsLng);
+								// 목적지 까지 간 다음에는 굳이 다시 보낼 필요는 없으니까
+								if(missionDone == 1){
+									System.out.println("when missionDone is 1. than clear the marker");
+									GcsMain.instance.controller.flightMap.controller.requestMarkClear();
+									// 목적지 Marker 삭제
+									missionDone = 2;
+									// 미션 종료에 따른 트리거
+								}
+								// 안드로이드에 드론 좌표 전송 용
+								// 아직 목적지 seq에 도착하지 않았다면 수행토록
+								else if(missionDone == 0){
+									//  System.out.println("missionDone : " + missionDone);
+									if (gpsSendThread == 0) {
+										try {
+											new Thread() {
+												@Override
+												public void run() {
+													try {
+														System.out.println("GPS Publish Try");
+														client.publish("/android/page2", object.toString().getBytes(), 0, false);
+														System.out.println("GPS Publish Done");
+														gpsSendThread = 1;
+														Thread.sleep(1000);
+														gpsSendThread = 0;
+													} catch (InterruptedException e) {
+														e.printStackTrace();
+													} catch (MqttPersistenceException e) {
+														e.printStackTrace();
+													} catch (MqttException e) {
+														e.printStackTrace();
+													}
 												}
-											}
-										}.start();
-									} catch (Exception e) {
-										System.out.println("GPS Fail");
-										System.out.println(e.getMessage());
+											}.start();
+										} catch (Exception e) {
+											System.out.println("GPS Fail");
+											System.out.println(e.getMessage());
+										}
 									}
 								}
+								// 한번 보냈음을 완료함을 알려줌
+								FCMqttClientTrigger_GPS = false;
 							}
-
-							//String latitube = String.valueOf(jsonObject.get("currLat"));
-							//String longitube = String.valueOf(jsonObject.get("currLng"));
-
-							// 한번 보냈음을 완료함을 알려줌
-							FCMqttClientTrigger_GPS = false;
 						}
 					}
 				}
@@ -917,28 +929,7 @@ public class GcsMainController implements Initializable {
 				public void messageArrived(String s, MqttMessage mqttMessage){
 
 					String strmsg = new String(mqttMessage.getPayload());
-					JSONObject jsonObject = new JSONObject(strmsg);
-					System.out.println("Message Arrived. MSGID : " + jsonObject.get("msgid"));
-					if(jsonObject.get("msgid").equals("missionStart")){
-						// msgid : missionStart 를 전달받으면 그 내부에
-						// 목적지 Lat, Lng 좌표를 전달받아 미션을 생성할 때, 사용할 수 있도록 한다.
-						destinationLat = (double) jsonObject.get("lat");
-						destinationLng = (double) jsonObject.get("lng");
-						// missionStart 메세지가 web 으로 부터 전달받으면 Combine01Dialog01 생성
-						if(!WebMissionInTrigger){
-							// combine01dialog 가 실행되지 않았을 때 뜨도록
-							Platform.runLater(new Runnable() {
-								@Override
-								public void run() {
-									System.out.println("CombineDialog01 Activated");
-									//CombineDialog01 combineDialog01 = new CombineDialog01();
-									//combineDialog01.show();
-								}
-							});
-							// 미션 시작에 따른 트리거 true로 변경
-						}
-						WebMissionInTrigger = true;
-					}
+					System.out.println("Message Arrived /gcs/main : " + strmsg);
 				}
 
 				@Override
