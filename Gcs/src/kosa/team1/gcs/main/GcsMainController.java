@@ -78,7 +78,7 @@ public class GcsMainController implements Initializable {
 	@FXML public Button btnMissionReady;
 	@FXML public Button btnRootSet;
 	@FXML public Button btnPackage;
-
+	@FXML public Button btnDroneSelect;
 	// 생성자
 	public GcsMainController(){
 		fcMqttClient = null;
@@ -118,7 +118,7 @@ public class GcsMainController implements Initializable {
 	private int missionDone = 0;
 
 	private int currentMissionNumber = 0;
-
+	private int droneNumber = 2;
 	//---------------------------------------------------------------------------------
 	@Override
 	public void initialize(URL location, ResourceBundle resources) {
@@ -149,7 +149,7 @@ public class GcsMainController implements Initializable {
 		btnSouth.setOnAction(btnSouthEventHandler);
 		btnEast.setOnAction(btnEastEventHandler);
 		btnWest.setOnAction(btnWestEventHandler);
-
+		btnDroneSelect.setOnAction(btnDroneSelectHandler);
 		//
 		btnMissionReady.setOnAction(btnMissionReadyHandler);
 		btnRootSet.setOnAction(btnRootSetHandler);
@@ -592,6 +592,9 @@ public class GcsMainController implements Initializable {
 				AlertDialog.showOkButton("알림", "미션 아이템 수가 부족합니다.");
 			} else {
 				drone.flightController.sendMissionUpload(jsonArray);
+				new Thread(){
+
+				}.start();
 				fcMqttClient.SendMissionRoot();
 				MissionUploadTrigger = true;
 			}
@@ -738,6 +741,13 @@ public class GcsMainController implements Initializable {
 		}
 	};
 
+	public EventHandler<ActionEvent> btnDroneSelectHandler = new EventHandler<ActionEvent>() {
+		@Override
+		public void handle(ActionEvent event) {
+			//ServiceDroneSelect serviceDroneSelect = new ServiceDroneSelect();
+			//serviceDroneSelect.show();
+		}
+	};
 	// 이벤트 핸들러 ----------------------------------------------------------------
 
 
@@ -802,7 +812,12 @@ public class GcsMainController implements Initializable {
 									System.out.println("DroneControllerTrigger 0 to 1");
 									DroneControllerTrigger = 1;
 									// 미션이 도착지에 완료했음에 대한 메세지를 Web 과 Android 에 전송
-									fcMqttClient.SendMissionEnd();
+									new Thread(){
+										@Override
+										public void run(){
+											fcMqttClient.SendMissionEnd();
+										}
+									}.start();
 									// 이게 수행되기 전에 한번 더 돌아서 service04가 두번 실행되는 경우가 있음
 									Platform.runLater(new Runnable() {
 										@Override
@@ -916,16 +931,22 @@ public class GcsMainController implements Initializable {
 		// android 에는 mission 이 시작되었다고 알려 줌
 		public void SendMissionRoot(){
 
+			JSONObject settingRoot = new JSONObject();
 			JSONArray totalRoot = GcsMain.instance.controller.flightMap.controller.getMissionItems();
 			JSONArray spotRoot = new JSONArray();
+
 			for(int i = 0 ; i < totalRoot.length() ; i++){
 				JSONObject jsonObject = (JSONObject) totalRoot.get(i);
 				int getCommand = jsonObject.getInt("command");
-				if(getCommand == 22){
+				if(getCommand == 16){
 					spotRoot.put(jsonObject);
 					// 이동 명령 spot 만 전송할 것이다.
 				}
 			}
+			settingRoot.put("msgid","missionSpots");
+			settingRoot.put("missionSpots",spotRoot);
+			settingRoot.put("missionNumber", currentMissionNumber);
+			settingRoot.put("droneNumber", droneNumber);
 			try{
 				System.out.println("Trying MissionSpots Publish");
 				JSONObject jsonObject = new JSONObject();
@@ -934,7 +955,8 @@ public class GcsMainController implements Initializable {
 				jsonObject.put("missionNumber",currentMissionNumber);
 				System.out.println("missionNumber : " + currentMissionNumber);
 				client.publish("/android/page1", jsonObject.toString().getBytes(), 0, false);
-				client.publish("/web/missionStatus", spotRoot.toString().getBytes(), 0, false);
+				//client.publish("/web/missionStatus", jsonObject.toString().getBytes(), 0, false);
+				client.publish("/web/missionStatus", settingRoot.toString().getBytes(), 0, false);
 				System.out.println("Done  MissionSpots Publish");
 			}
 			catch (MqttException e){
@@ -946,17 +968,21 @@ public class GcsMainController implements Initializable {
 		// 미션이 종료가 되었다고 알려줄 메소드
 		public void SendMissionEnd(){
 
-			System.out.println("");
 			JSONObject jsonObject = new JSONObject();
 			jsonObject.put("msgid", "missionStatus");
 			jsonObject.put("status", "missionFinish");
+			jsonObject.put("missionNumber", currentMissionNumber);
+			jsonObject.put("droneNumber" , droneNumber);
+			System.out.println("MissionEnd Publish data : " + jsonObject.toString());
 			try{
 				System.out.println("Trying MissionEnd Publish");
 				client.publish("/android/page2", jsonObject.toString().getBytes(), 0, false);
+
 				client.publish("/web/missionStatus", jsonObject.toString().getBytes(), 0, false);
 				System.out.println("Done MissionEnd Publish");
 			}
 			catch (MqttException e){
+				System.out.println(e.getMessage());
 				e.printStackTrace();
 			}
 		}

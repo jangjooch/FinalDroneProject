@@ -32,8 +32,8 @@ public class X_PublishTest_Missions {
             //jsonObject.put("lat",37.504000);
             //jsonObject.put("lng",127.122000);
             // 협회 좌표
-            jsonObject.put("lat", 37.5469722);
-            jsonObject.put("lng", 127.1196016);
+            jsonObject.put("lat", "37.5469722");
+            jsonObject.put("lng", "127.1196016");
             jsonArray.put(jsonObject);
         }
 

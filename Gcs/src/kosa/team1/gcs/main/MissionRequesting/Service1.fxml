@@ -1,15 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import java.lang.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.text.*?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.Font?>
+
 <BorderPane prefHeight="400.0" prefWidth="600.0" styleClass="pane" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="kosa.team1.gcs.main.MissionRequesting.MissionRequestingController">
     <bottom>
         <HBox alignment="CENTER" spacing="10.0" styleClass="pane" BorderPane.alignment="CENTER">
             <children>
-                <Button fx:id="btnOK" minHeight="40.0" minWidth="100.0" mnemonicParsing="false" text="OK" />
+                <Button fx:id="btnReset" minHeight="40.0" minWidth="100.0" mnemonicParsing="false" text="새로고침" />
                 <Button fx:id="btnCancel" minHeight="40.0" minWidth="100.0" mnemonicParsing="false" text="Cancel" />
             </children>
             <padding>

@@ -21,7 +21,7 @@ import java.net.URL;
 import java.util.ResourceBundle;
 
 public class MissionRequestingController implements Initializable {
-    @FXML private Button btnOK;
+    @FXML private Button btnReset;
     @FXML private Button btnCancel;
     @FXML private VBox vbox;
 
@@ -31,9 +31,10 @@ public class MissionRequestingController implements Initializable {
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        btnOK.setOnAction(btnOKEventHandler);
+        btnReset.setOnAction(btnRestEventHandler);
         btnCancel.setOnAction(btnCancelEventHandler);
         missionMqttClient = new MissionMqttClient();
+        missionMqttClient.requestData();
         initVBox();
     }
 
@@ -93,15 +94,24 @@ public class MissionRequestingController implements Initializable {
                     btnMap.setOnAction(new EventHandler<ActionEvent>() {
                         @Override
                         public void handle(ActionEvent event) {
-                            double destiLat = (double) mission.get("lat");
-                            double destiLng = (double) mission.get("lng");
-                            int missionNumber = (int) mission.get("missionNumber");
-                            GcsMain.instance.controller.flightMap.controller.requestMarkClear();
-                            GcsMain.instance.controller.flightMap.controller.requestMark( destiLat, destiLng);
-                            GcsMain.instance.controller.setDestination(destiLat, destiLng, missionNumber);
-                            missionMqttClient.SendMissionStart((Integer) mission.get("missionNumber"));
-                            Stage stage = (Stage) btnCancel.getScene().getWindow();
-                            stage.close();
+                            try{
+                                double destiLat = Double.parseDouble((String) mission.get("lat"));
+                                double destiLng = Double.parseDouble((String) mission.get("lng"));
+                                System.out.println("lat : " + destiLat);
+                                System.out.println("lng : " + destiLat);
+                                int missionNumber = (int) mission.get("missionNumber");
+                                GcsMain.instance.controller.flightMap.controller.requestMarkClear();
+                                GcsMain.instance.controller.flightMap.controller.requestMark(destiLat, destiLng);
+                                GcsMain.instance.controller.setDestination(destiLat, destiLng, missionNumber);
+                                missionMqttClient.SendMissionStart((Integer) mission.get("missionNumber"));
+                                Stage stage = (Stage) btnCancel.getScene().getWindow();
+                                System.out.println("Requesting missionReady");
+                                JSONObject endRequest = new JSONObject();
+                                stage.close();
+                            }
+                            catch (Exception e){
+                                e.printStackTrace();
+                            }
                         }
                     });
                 }
@@ -112,11 +122,10 @@ public class MissionRequestingController implements Initializable {
         }
     }
 
-    private EventHandler<ActionEvent> btnOKEventHandler = new EventHandler<ActionEvent>() {
+    private EventHandler<ActionEvent> btnRestEventHandler = new EventHandler<ActionEvent>() {
         @Override
         public void handle(ActionEvent event) {
-            Stage stage = (Stage) btnCancel.getScene().getWindow();
-            stage.close();
+            missionMqttClient.requestData();
         }
     };
 
@@ -145,8 +154,9 @@ public class MissionRequestingController implements Initializable {
                     System.out.println(e.getMessage());
                 }
             }
-
             make_sub();
+            // 데이터 요청
+            requestData();
 
         }
 
@@ -173,7 +183,7 @@ public class MissionRequestingController implements Initializable {
                     }
 
                     // System.out.println("JsonArray : " + array);
-                    System.out.println("JsonArray : " + array.get(1).toString());
+                    System.out.println("JsonArray : " + array.get(0).toString());
                     for(int i = 0 ; i < array.length() ; i++){
                         System.out.println(array.get(i).toString());
                     }
@@ -204,13 +214,32 @@ public class MissionRequestingController implements Initializable {
         }
 
         public void SendMissionStart(int MSNumber){
-            byte[] data = String.valueOf(MSNumber).getBytes();
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.put("msgid", "missionStart");
+            jsonObject.put("missionNumber", MSNumber);
+            jsonObject.put("droneNumber", 2);
+            jsonObject.put("needs", "missionReady");
             try {
                 System.out.println("Try Sending Mission Start. " + MSNumber);
-                client.publish("/web/missionstart", data, 0, false);
+                client.publish("/web/missionStatus", jsonObject.toString().getBytes(), 0, false);
                 System.out.println("Publish Done MissionStart. " + MSNumber);
             } catch (MqttException e) {
                 System.out.println("Publish Error Mission Start. " + MSNumber);
+                e.printStackTrace();
+            }
+        }
+
+        public void requestData(){
+
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.put("msgid", "dataRequest");
+            jsonObject.put("needs", "missionReady");
+
+            try {
+                System.out.println("Data Request Try");
+                client.publish("/web/missionStatus", jsonObject.toString().getBytes(), 0, false);
+                System.out.println("Data Request Done");
+            } catch (MqttException e) {
                 e.printStackTrace();
             }
         }

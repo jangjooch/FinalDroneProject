@@ -238,4 +238,46 @@ public class ServiceDialog04Controller implements Initializable {
             }
         }
     }
+
+    public class SnapShotClient{
+        MqttClient client;
+        public SnapShotClient(){
+            try {
+                System.out.println(" SnapShotClient Create Try");
+                client = new MqttClient("tcp://106.253.56.124:1881",MqttClient.generateClientId() , null);
+                System.out.println(" SnapShotClient Create Done");
+            } catch (MqttException e) {
+                e.printStackTrace();
+            }
+
+        }
+
+        public void make_sub(){
+            client.setCallback(new MqttCallback() {
+                @Override
+                public void connectionLost(Throwable throwable) {
+                    System.out.println("SnapShotClient Connection Lost");
+                }
+
+                @Override
+                public void messageArrived(String s, MqttMessage mqttMessage) throws Exception {
+                    byte[] data = mqttMessage.getPayload();
+                }
+
+                @Override
+                public void deliveryComplete(IMqttDeliveryToken iMqttDeliveryToken) {
+
+                }
+            });
+            try {
+                System.out.println("SnapShot subscribe Try");
+                client.subscribe("/drone/cam1/pub");
+                System.out.println("SnapShot subscribe Done");
+            } catch (MqttException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+
 }
