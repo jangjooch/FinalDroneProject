@@ -5,6 +5,7 @@ java -Djava.library.path=/usr/lib/jni:/home/pi/opencv/opencv-3.4.5/build/lib -cp
 package kosa.team1.drone.main;
 
 import kosa.team1.drone.network.NetworkConfig;
+import org.eclipse.paho.client.mqttv3.MqttException;
 import syk.drone.device.Camera;
 import syk.drone.device.FlightController;
 //import syk.sample.drone.network.NetworkConfig;
@@ -41,5 +42,18 @@ public class RealMain {
                 networkConfig.droneTopic +"/cam0/pub",
                 networkConfig.droneTopic +"/cam0/sub"
         );
+
+        ControlMagnet controlMagnet = null;
+        try {
+            controlMagnet = new ControlMagnet();
+            controlMagnet.Creating_Connection(
+                    networkConfig.mqttBrokerConnStr,
+                    networkConfig.droneTopic + "/magnet/pub",
+                    networkConfig.droneTopic + "/magnet/sub"
+            );
+            System.out.println("Magnet Connected");
+        } catch (MqttException e) {
+            e.printStackTrace();
+        }
     }
 }

@@ -60,7 +60,7 @@ public class ServiceDialog04Controller implements Initializable {
             System.out.println("MobileRequest : " + mobileRequest);
             if(mobileRequest){
                 String msg = "off";
-                raspiMqttClient.ControlMagnet(msg);
+                raspiMqttClient.ControlMagnet();
                 System.out.println("Published Message to Raspi Magnet " + msg);
             }
             else{
@@ -176,7 +176,10 @@ public class ServiceDialog04Controller implements Initializable {
                     }
                     else if(jsonObject.get("msgid").equals("control")){
                         int length = (int) jsonObject.get("speed");
-                        if(jsonObject.get("direction").equals("up")){
+                        if(jsonObject.get("magent").equals("off")){
+                            ControlMagnet();
+                        }
+                        else if(jsonObject.get("direction").equals("up")){
                             DroneControl("up", length);
                         }
                         else if(jsonObject.get("direction").equals("down")){
@@ -222,12 +225,13 @@ public class ServiceDialog04Controller implements Initializable {
             System.out.println("Published Message to Raspi Direction " + message);
         }
 
-        public void ControlMagnet(String message){
+        public void ControlMagnet(){
             try {
+                JSONObject jsonObject = new JSONObject();
+                jsonObject.put("magnet","off");
                 System.out.println("Try Publish Message to Raspi Magnet");
-
-                client.publish("/jang/drone/magnet", "off".getBytes(), 0, false);
-                System.out.println("Done Published Message to Raspi Magnet " + message);
+                client.publish("/drone/magnet/pub", jsonObject.toString().getBytes(), 0, false);
+                System.out.println("Done Published Message to Raspi Magnet");
             } catch (MqttException e) {
                 System.out.println(e.getMessage());
                 e.printStackTrace();

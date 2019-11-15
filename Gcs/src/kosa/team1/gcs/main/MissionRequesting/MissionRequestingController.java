@@ -95,9 +95,10 @@ public class MissionRequestingController implements Initializable {
                         public void handle(ActionEvent event) {
                             double destiLat = (double) mission.get("lat");
                             double destiLng = (double) mission.get("lng");
+                            int missionNumber = (int) mission.get("missionNumber");
                             GcsMain.instance.controller.flightMap.controller.requestMarkClear();
                             GcsMain.instance.controller.flightMap.controller.requestMark( destiLat, destiLng);
-                            GcsMain.instance.controller.setDestination(destiLat, destiLng);
+                            GcsMain.instance.controller.setDestination(destiLat, destiLng, missionNumber);
                             missionMqttClient.SendMissionStart((Integer) mission.get("missionNumber"));
                             Stage stage = (Stage) btnCancel.getScene().getWindow();
                             stage.close();

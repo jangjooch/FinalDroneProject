@@ -77,6 +77,7 @@ public class GcsMainController implements Initializable {
 	// 상단 서비스
 	@FXML public Button btnMissionReady;
 	@FXML public Button btnRootSet;
+	@FXML public Button btnPackage;
 
 	// 생성자
 	public GcsMainController(){
@@ -100,10 +101,12 @@ public class GcsMainController implements Initializable {
 	private int DroneControllerTrigger = 0;
 
 	// 안드로이드와 Web 에서 전송될 토픽 /gcs/main 에 대한 subscribe 되는 클라이언트 이다.
+	// 또한 안드로이드와 Web 에 정보를 전달 역할을 수행 할 클라이언트이다.
 	private GcsMainMqtt gcsMainMqtt;
 
 	// /drone/fc/pub 에서 나오는 정보를 받아 실행 될 클라이언트
 	private FCMqttClient fcMqttClient;
+	// 실제로 EventHandler 와 연관되어 사용되진 않을 것이다.
 
 	private double destinationLat;
 	private double destinationLng;
@@ -114,6 +117,7 @@ public class GcsMainController implements Initializable {
 	// 미션 수행 완료 트리거
 	private int missionDone = 0;
 
+	private int currentMissionNumber = 0;
 
 	//---------------------------------------------------------------------------------
 	@Override
@@ -588,6 +592,7 @@ public class GcsMainController implements Initializable {
 				AlertDialog.showOkButton("알림", "미션 아이템 수가 부족합니다.");
 			} else {
 				drone.flightController.sendMissionUpload(jsonArray);
+				fcMqttClient.SendMissionRoot();
 				MissionUploadTrigger = true;
 			}
 		}
@@ -719,6 +724,13 @@ public class GcsMainController implements Initializable {
 		}
 	};
 
+	public EventHandler<ActionEvent> btnPackageHandler = new EventHandler<ActionEvent>() {
+		@Override
+		public void handle(ActionEvent event) {
+			gcsMainMqtt.MagentActivate();
+		}
+	};
+
 	public EventHandler<ActionEvent> btnRootSetHandler = new EventHandler<ActionEvent>() {
 		@Override
 		public void handle(ActionEvent event) {
@@ -729,12 +741,14 @@ public class GcsMainController implements Initializable {
 	// 이벤트 핸들러 ----------------------------------------------------------------
 
 
-	public void setDestination(double getLat, double getLng){
+	public void setDestination(double getLat, double getLng, int missionNumber){
 		this.destinationLat = getLat;
 		this.destinationLng = getLng;
+		this.currentMissionNumber = missionNumber;
 	}
 
-	// GCS 전체에 들어오는 정보를 받는 client
+
+	// FC 에서 Publish 하는 정보를 읽어낼 클라이언트
 	public class FCMqttClient{
 		private MqttClient client;
 
@@ -787,6 +801,8 @@ public class GcsMainController implements Initializable {
 								if(DroneControllerTrigger == 0){
 									System.out.println("DroneControllerTrigger 0 to 1");
 									DroneControllerTrigger = 1;
+									// 미션이 도착지에 완료했음에 대한 메세지를 Web 과 Android 에 전송
+									fcMqttClient.SendMissionEnd();
 									// 이게 수행되기 전에 한번 더 돌아서 service04가 두번 실행되는 경우가 있음
 									Platform.runLater(new Runnable() {
 										@Override
@@ -819,7 +835,7 @@ public class GcsMainController implements Initializable {
 								gpsLat = String.valueOf(jsonObject.get("currLat"));
 								gpsLng = String.valueOf(jsonObject.get("currLng"));
 								JSONObject object = new JSONObject();
-								object.put("data", "gps");
+								object.put("msgid", "droneGps");
 								object.put("lat", gpsLat);
 								object.put("lng", gpsLng);
 								// 목적지 까지 간 다음에는 굳이 다시 보낼 필요는 없으니까
@@ -895,8 +911,58 @@ public class GcsMainController implements Initializable {
 				}
 			}
 		}
+
+		// Web 에는 미션 경로를 보내주고
+		// android 에는 mission 이 시작되었다고 알려 줌
+		public void SendMissionRoot(){
+
+			JSONArray totalRoot = GcsMain.instance.controller.flightMap.controller.getMissionItems();
+			JSONArray spotRoot = new JSONArray();
+			for(int i = 0 ; i < totalRoot.length() ; i++){
+				JSONObject jsonObject = (JSONObject) totalRoot.get(i);
+				int getCommand = jsonObject.getInt("command");
+				if(getCommand == 22){
+					spotRoot.put(jsonObject);
+					// 이동 명령 spot 만 전송할 것이다.
+				}
+			}
+			try{
+				System.out.println("Trying MissionSpots Publish");
+				JSONObject jsonObject = new JSONObject();
+				jsonObject.put("msgid", "missionStatus");
+				jsonObject.put("status", "missionStart");
+				jsonObject.put("missionNumber",currentMissionNumber);
+				System.out.println("missionNumber : " + currentMissionNumber);
+				client.publish("/android/page1", jsonObject.toString().getBytes(), 0, false);
+				client.publish("/web/missionStatus", spotRoot.toString().getBytes(), 0, false);
+				System.out.println("Done  MissionSpots Publish");
+			}
+			catch (MqttException e){
+				e.printStackTrace();
+			}
+
+		}
+
+		// 미션이 종료가 되었다고 알려줄 메소드
+		public void SendMissionEnd(){
+
+			System.out.println("");
+			JSONObject jsonObject = new JSONObject();
+			jsonObject.put("msgid", "missionStatus");
+			jsonObject.put("status", "missionFinish");
+			try{
+				System.out.println("Trying MissionEnd Publish");
+				client.publish("/android/page2", jsonObject.toString().getBytes(), 0, false);
+				client.publish("/web/missionStatus", jsonObject.toString().getBytes(), 0, false);
+				System.out.println("Done MissionEnd Publish");
+			}
+			catch (MqttException e){
+				e.printStackTrace();
+			}
+		}
 	}
 
+	// Android 와 Web 에서 전송하는 데이터를 받을 클라이언트
 	public class GcsMainMqtt{
 
 		private MqttClient client;
@@ -945,6 +1011,20 @@ public class GcsMainController implements Initializable {
 				e.printStackTrace();
 			}
 		}
+
+		public void MagentActivate(){
+
+			System.out.println("Magnet Off Control");
+			JSONObject jsonObject = new JSONObject();
+			jsonObject.put("magnet", "on");
+			try {
+				System.out.println("Trying Magnet Activate Publish");
+				client.publish("/drone/magnet/pub", jsonObject.toString().getBytes(), 0, false);
+				System.out.println("Done Magnet Activate Publish");
+			} catch (MqttException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 
 	public void rootSetMethod(){
@@ -990,7 +1070,7 @@ public class GcsMainController implements Initializable {
 		// array에 추가한다.
 		for(int i = getAdd.length() - 1 ; i > 0 ; i--){
 			JSONObject object = (JSONObject) getAdd.get(i);
-			object.put("seq", idx); // 변경된 arra
+			object.put("seq", idx); // 변경된 array
 			System.out.println(object.toString());
 			idx++;
 			array.put(object);

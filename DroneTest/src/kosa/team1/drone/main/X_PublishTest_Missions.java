@@ -28,7 +28,7 @@ public class X_PublishTest_Missions {
 
         for(int i = 0 ; i < 5 ; i++){
             JSONObject jsonObject = new JSONObject();
-            jsonObject.put("missionNumber", i);
+            jsonObject.put("missionNumber", 14);
             //jsonObject.put("lat",37.504000);
             //jsonObject.put("lng",127.122000);
             // 협회 좌표
