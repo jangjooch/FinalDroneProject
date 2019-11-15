@@ -14,6 +14,7 @@ import javafx.scene.layout.StackPane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
+import kosa.team1.gcs.main.DroneSelect.ServiceDroneSelect;
 import org.eclipse.paho.client.mqttv3.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -744,10 +745,11 @@ public class GcsMainController implements Initializable {
 	public EventHandler<ActionEvent> btnDroneSelectHandler = new EventHandler<ActionEvent>() {
 		@Override
 		public void handle(ActionEvent event) {
-			//ServiceDroneSelect serviceDroneSelect = new ServiceDroneSelect();
-			//serviceDroneSelect.show();
+			ServiceDroneSelect serviceDroneSelect = new ServiceDroneSelect();
+			serviceDroneSelect.show();
 		}
 	};
+
 	// 이벤트 핸들러 ----------------------------------------------------------------
 
 

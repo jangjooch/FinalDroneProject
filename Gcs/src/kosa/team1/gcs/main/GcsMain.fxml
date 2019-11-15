@@ -199,6 +199,7 @@
             <HBox alignment="CENTER_RIGHT" spacing="5.0" HBox.hgrow="ALWAYS">
                <children>
                   <Button fx:id="btnMissionReady" maxHeight="40.0" maxWidth="1.7976931348623157E308" minHeight="40.0" mnemonicParsing="false" text="미션 대기" />
+				   <Button fx:id="btnDroneSelect" maxHeight="40.0" maxWidth="1.7976931348623157E308" minHeight="40.0" mnemonicParsing="false" text="드론 선택" />
 				  <Button fx:id="btnPackage" maxHeight="40.0" maxWidth="1.7976931348623157E308" minHeight="40.0" mnemonicParsing="false" text="화물 적재" />
 				  <Button fx:id="btnRootSet" maxHeight="40.0" maxWidth="1.7976931348623157E308" minHeight="40.0" mnemonicParsing="false" text="경로 설정" />
                </children>

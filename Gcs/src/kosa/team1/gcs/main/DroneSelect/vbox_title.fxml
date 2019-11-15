@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import javafx.geometry.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.text.Font?>
+
+<HBox alignment="CENTER" minHeight="40.0" minWidth="500.0" style="-fx-border-width: 0 0 2 0; -fx-border-color: black; -fx-background-color: #05587b;" styleClass="pane" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+   <children>
+      <Label alignment="CENTER" prefWidth="100.0" text="드론번호">
+         <font>
+            <Font size="13.0" />
+         </font></Label>
+      <Label alignment="CENTER" maxWidth="1.7976931348623157E308" text="드론모델명" HBox.hgrow="ALWAYS">
+         <font>
+            <Font size="13.0" />
+         </font></Label>
+      <Label alignment="CENTER" maxWidth="1.7976931348623157E308" text="드론상태" HBox.hgrow="ALWAYS">
+         <font>
+            <Font size="13.0" />
+         </font></Label>
+      <Label alignment="CENTER" prefWidth="100.0" text="선택">
+         <font>
+            <Font size="13.0" />
+         </font></Label>
+   </children>
+   <padding>
+      <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+   </padding>
+</HBox>
