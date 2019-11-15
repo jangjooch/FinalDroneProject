@@ -14,7 +14,7 @@ import javafx.scene.layout.StackPane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
-import kosa.team1.gcs.main.DroneSelect.ServiceDroneSelect;
+
 import org.eclipse.paho.client.mqttv3.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -35,6 +35,8 @@ import  kosa.team1.gcs.network.Drone;
 import  kosa.team1.gcs.network.NetworkConfig;
 import kosa.team1.gcs.main.Dronemanual.ServiceDialog04;
 import kosa.team1.gcs.main.MissionRequesting.MissionRequesting;
+import kosa.team1.gcs.main.DroneSelect.ServiceDroneSelect;
+
 
 import java.net.URL;
 import java.util.ResourceBundle;
@@ -120,6 +122,9 @@ public class GcsMainController implements Initializable {
 
 	private int currentMissionNumber = 0;
 	private int droneNumber = 2;
+
+	// 미션 시작 전 : 0,  미션 시작 : 1, 미션 종료 : 2.
+	private int missionCurrentSeqTrigger = 0;
 	//---------------------------------------------------------------------------------
 	@Override
 	public void initialize(URL location, ResourceBundle resources) {
@@ -808,8 +813,19 @@ public class GcsMainController implements Initializable {
 							System.out.println("MissionSize : " + missionSize);
 							int missionCurrentSeq = (int) jsonObject.get("seq");
 							System.out.println("MissionCurrent : " + missionCurrentSeq);
+							if(missionCurrentSeqTrigger == 1){
+								// 목적지 도달 이후 출발지로 디시 돌아왔음을 보여줄 수 있도록
+								if(missionCurrentSeq == 0){
+									// 목적지 도달 이후 정상적인 RTL가 되었으면 완전한 미션 종료임으로
+									// 이를 웹에 전달한다.
+									fcMqttClient.SendMissionEndToWeb();
+									missionCurrentSeqTrigger = 2;
+								}
+							}
 							if(missionCurrentSeq == missionSize / 2 + 1){
 								// 해당 공식은 미션이 수행 중에 있어 목적지에 도착한 이후 Delay 다음 시퀀스의 미션을 수행할 때 작동된다.
+								missionCurrentSeqTrigger = 1;
+								// missionCurrentSeq 가 0이 아닐 것 이니까.
 								if(DroneControllerTrigger == 0){
 									System.out.println("DroneControllerTrigger 0 to 1");
 									DroneControllerTrigger = 1;
@@ -817,7 +833,9 @@ public class GcsMainController implements Initializable {
 									new Thread(){
 										@Override
 										public void run(){
-											fcMqttClient.SendMissionEnd();
+											System.out.println("try Publish MissionEnd");
+											fcMqttClient.SendMissionEndToAndroid();
+											System.out.println("done Publish MissionEnd");
 										}
 									}.start();
 									// 이게 수행되기 전에 한번 더 돌아서 service04가 두번 실행되는 경우가 있음
@@ -968,7 +986,7 @@ public class GcsMainController implements Initializable {
 		}
 
 		// 미션이 종료가 되었다고 알려줄 메소드
-		public void SendMissionEnd(){
+		public void SendMissionEndToAndroid(){
 
 			JSONObject jsonObject = new JSONObject();
 			jsonObject.put("msgid", "missionStatus");
@@ -977,11 +995,28 @@ public class GcsMainController implements Initializable {
 			jsonObject.put("droneNumber" , droneNumber);
 			System.out.println("MissionEnd Publish data : " + jsonObject.toString());
 			try{
-				System.out.println("Trying MissionEnd Publish");
+				System.out.println("Trying MissionEnd To Mobile Publish");
 				client.publish("/android/page2", jsonObject.toString().getBytes(), 0, false);
+				System.out.println("Done MissionEnd To Mobile Publish");
+			}
+			catch (MqttException e){
+				System.out.println(e.getMessage());
+				e.printStackTrace();
+			}
+		}
 
+		public void SendMissionEndToWeb(){
+
+			JSONObject jsonObject = new JSONObject();
+			jsonObject.put("msgid", "missionStatus");
+			jsonObject.put("status", "missionFinish");
+			jsonObject.put("missionNumber", currentMissionNumber);
+			jsonObject.put("droneNumber" , droneNumber);
+			System.out.println("MissionEnd Publish data : " + jsonObject.toString());
+			try{
+				System.out.println("Trying MissionEnd To Web Publish");
 				client.publish("/web/missionStatus", jsonObject.toString().getBytes(), 0, false);
-				System.out.println("Done MissionEnd Publish");
+				System.out.println("Done MissionEnd To Web Publish");
 			}
 			catch (MqttException e){
 				System.out.println(e.getMessage());
