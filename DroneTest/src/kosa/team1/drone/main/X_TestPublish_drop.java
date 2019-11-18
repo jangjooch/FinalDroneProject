@@ -3,10 +3,9 @@ package kosa.team1.drone.main;
 import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
-import org.json.JSONArray;
 import org.json.JSONObject;
 
-public class X_PublishTest_MobileControl {
+public class X_TestPublish_drop {
 
     public static void main(String[] args) {
         MqttClient client;
@@ -28,11 +27,11 @@ public class X_PublishTest_MobileControl {
         jsonObject.put("msgid", "control");
         jsonObject.put("direction", "up");
         jsonObject.put("speed", 1);
-        jsonObject.put("magnet", "off");
+        jsonObject.put("missionNumber", 87);
         System.out.println(jsonObject.toString());
         try {
             System.out.println("Publish Try");
-            client.publish("/gcs/droneManual", jsonObject.toString().getBytes(), 0, false);
+            client.publish("/drone/cam0/gcs", jsonObject.toString().getBytes(), 0, false);
             System.out.println("Publish Done");
 
         } catch (MqttException e) {

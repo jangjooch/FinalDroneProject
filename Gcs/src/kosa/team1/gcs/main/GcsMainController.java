@@ -121,7 +121,7 @@ public class GcsMainController implements Initializable {
 	private int missionDone = 0;
 
 	private int currentMissionNumber = -1;
-	private int droneNumber = 2;
+	private int droneNumber = -1;
 
 	// 미션 시작 전 : 0,  미션 시작 : 1, 미션 종료 : 2.
 	private int missionCurrentSeqTrigger = 0;
@@ -606,16 +606,23 @@ public class GcsMainController implements Initializable {
 	public EventHandler<ActionEvent> btnMissionUploadEventHandler = new EventHandler<ActionEvent>() {
 		@Override
 		public void handle(ActionEvent event) {
-			JSONArray jsonArray = flightMap.controller.getMissionItems();
-			if(jsonArray.length() < 2) {
-				AlertDialog.showOkButton("알림", "미션 아이템 수가 부족합니다.");
-			} else {
-				drone.flightController.sendMissionUpload(jsonArray);
-				new Thread(){
-
-				}.start();
-				fcMqttClient.SendMissionRoot();
-				MissionUploadTrigger = true;
+			if(currentMissionNumber == -1){
+				GcsMain.instance.controller.flightMap.controller.showInfoLabel("미션이 선택되지 않았습니다.");
+			}
+			else if(droneNumber == -1){
+				GcsMain.instance.controller.flightMap.controller.showInfoLabel("드론이 선택되지 않았습니다.");
+			}
+			else{
+				JSONArray jsonArray = flightMap.controller.getMissionItems();
+				if(jsonArray.length() < 2) {
+					AlertDialog.showOkButton("알림", "미션 아이템 수가 부족합니다.");
+				} else {
+					drone.flightController.sendMissionUpload(jsonArray);
+					new Thread(){
+					}.start();
+					fcMqttClient.SendMissionRoot();
+					MissionUploadTrigger = true;
+				}
 			}
 		}
 	};
@@ -769,12 +776,30 @@ public class GcsMainController implements Initializable {
 	};
 
 	public void pushX(){
+		if(currentMissionNumber != -1){
+			// 미션이 있는 상태에서 꺼진다면 갈제 RTL
+			GcsMain.instance.controller.flightMap.controller.setMode("RTL");
+		}
 		new Thread(){
 			@Override
 			public void run() {
 				gcsMainMqtt.resetDrone();
 			}
 		}.start();
+	}
+
+	public void ResetTriggers(){
+		System.out.println("Reset All Status");
+		FCMqttClientTrigger_GPS = false;
+		FCMqttClientTrigger_Mission = false;
+		WebMissionInTrigger = false;
+		MissionUploadTrigger = false;
+		DroneControllerTrigger = 0;
+		gpsSendThread = 0;
+		missionDone = 0;
+		currentMissionNumber = -1;
+		droneNumber = -1;
+		missionCurrentSeqTrigger = 0;
 	}
 
 	// 이벤트 핸들러 ----------------------------------------------------------------
@@ -844,8 +869,10 @@ public class GcsMainController implements Initializable {
 								if(missionCurrentSeq == 0){
 									// 목적지 도달 이후 정상적인 RTL가 되었으면 완전한 미션 종료임으로
 									// 이를 웹에 전달한다.
-									fcMqttClient.SendMissionEndToWeb();
 									missionCurrentSeqTrigger = 2;
+									fcMqttClient.SendMissionEndToWeb();
+									System.out.println("reset All Status");
+									ResetTriggers();
 								}
 							}
 							if(missionCurrentSeq == missionSize / 2 + 1){

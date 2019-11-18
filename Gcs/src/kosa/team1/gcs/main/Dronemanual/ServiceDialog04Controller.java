@@ -170,6 +170,12 @@ public class ServiceDialog04Controller implements Initializable {
 
                 @Override
                 public void messageArrived(String s, MqttMessage mqttMessage) throws Exception {
+                    if(new String(mqttMessage.getPayload()).equals("I'm going offline")){
+                        System.out.println("Fuck Stack");
+                    }
+                    else{
+
+                    }
                     System.out.println("Message Received from Mobile");
                     String getMsg = new String(mqttMessage.getPayload());
                     System.out.println("Received : " + getMsg);
@@ -337,10 +343,12 @@ public class ServiceDialog04Controller implements Initializable {
         public void takeSnapShot(){
 
             try {
+                System.out.println("Test SnapShot Try");
                 JSONObject jsonObject = new JSONObject();
                 jsonObject.put("msgid", "saveSnapShot");
                 jsonObject.put("snapShot", true);
                 client.publish("/drone/cam0/gcs",jsonObject.toString().getBytes(),0,false);
+                System.out.println("Test SnapShot Done");
             }
             catch (Exception e){
                 System.out.println(e.getMessage());
