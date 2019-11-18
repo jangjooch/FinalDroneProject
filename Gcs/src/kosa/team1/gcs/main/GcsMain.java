@@ -44,6 +44,8 @@ public class GcsMain extends Application {
 		primaryStage.setOnCloseRequest(new EventHandler<WindowEvent>() {
 			@Override
 			public void handle(WindowEvent event) {
+				System.out.println("Controller pushX Activate");
+				GcsMain.instance.controller.pushX();
 				System.exit(0);
 			}
 		});
@@ -54,6 +56,8 @@ public class GcsMain extends Application {
 		//Platform.exit();
 		System.exit(0);
 	}
+
+
 
 	public static void main(String[] args) {
 		launch(args);

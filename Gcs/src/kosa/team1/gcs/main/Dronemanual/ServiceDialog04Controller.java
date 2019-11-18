@@ -1,5 +1,6 @@
 package kosa.team1.gcs.main.Dronemanual;
 
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
@@ -26,7 +27,6 @@ public class ServiceDialog04Controller implements Initializable {
     // true 라고 한다면 GCS 에서 드론을 제어할 수 있도록 한다.
 
     public ServiceDialog04Controller() throws MqttException {
-
         GcsMain.instance.controller.flightMap.controller.setMode("GUIDED");
         mobileRequest = false;
 
@@ -170,35 +170,60 @@ public class ServiceDialog04Controller implements Initializable {
 
                 @Override
                 public void messageArrived(String s, MqttMessage mqttMessage) throws Exception {
-                    System.out.println("Message Received from Raspi");
+                    System.out.println("Message Received from Mobile");
                     String getMsg = new String(mqttMessage.getPayload());
                     System.out.println("Received : " + getMsg);
                     JSONObject jsonObject = new JSONObject(getMsg);
+                    System.out.println("Received Parsed Done : " + jsonObject.toString());
 
                     if(jsonObject.get("msgid").equals("emergency")){
+                        System.out.println("try Emergency");
                         mobileRequest = true;
                         textAreaAlternative.setText("GCS Control");
-                        Stage stage = (Stage) Btn_Drop.getScene().getWindow();
-                        System.out.println("Magent Drop Done");
-                        stage.close();
+                        System.out.println("done Emergency");
+                        //Stage stage = (Stage) Btn_Drop.getScene().getWindow();
+                        //System.out.println("Magent Drop Done");
+                        //stage.close();
                     }
                     else if(jsonObject.get("msgid").equals("control")){
+                        System.out.println("try control");
                         int length = (int) jsonObject.get("speed");
-                        if(jsonObject.get("magent").equals("off")){
-                            ControlMagnet();
-                            takeSnapShot();
-                            // drop 되면 화면 꺼지도록
-                            Stage stage = (Stage) Btn_Drop.getScene().getWindow();
-                            System.out.println("Magent Drop Done");
-                            stage.close();
+                        System.out.println("Moobile Control "+ jsonObject.get("direction") + " " + length );
+                        if(jsonObject.get("magnet").equals("off")){
+                            System.out.println("Mobile Magnet Off Activate");
+                            new Thread(){
+                                @Override
+                                public void run(){
+                                    System.out.println("Thread Run");
+                                    ControlMagnet();
+                                    takeSnapShot();
+                                    supplyDone();
+                                    System.out.println("Magent Drop Done");
+                                }
+                            }.start();
+                            Platform.runLater(new Runnable() {
+                                @Override
+                                public void run() {
+                                    try {
+                                        System.out.println("Drop To Close Stage");
+                                        Stage stage = (Stage) Btn_Drop.getScene().getWindow();
+                                        stage.close();
+                                        // drop 되면 화면 꺼지도록
+                                        System.out.println("Service04 Successfully Done");
+                                    }
+                                    catch (Exception e){
+                                        e.printStackTrace();
+                                    }
+                                }
+                            });
                         }
                         else if(jsonObject.get("direction").equals("up")){
-
+                            System.out.println("Mobile control up Activate");
                             new Thread(){
                                 @Override
                                 public void run(){
                                     try {
-                                        DroneControl("up",length);
+                                        DroneControl("up",1);
                                     } catch (MqttException e) {
                                         e.printStackTrace();
                                     }
@@ -207,11 +232,12 @@ public class ServiceDialog04Controller implements Initializable {
 
                         }
                         else if(jsonObject.get("direction").equals("down")){
+                            System.out.println("Mobile control down Activate");
                             new Thread(){
                                 @Override
                                 public void run(){
                                     try {
-                                        DroneControl("down",length);
+                                        DroneControl("down",1);
                                     } catch (MqttException e) {
                                         e.printStackTrace();
                                     }
@@ -219,11 +245,12 @@ public class ServiceDialog04Controller implements Initializable {
                             }.start();
                         }
                         else if(jsonObject.get("direction").equals("right")){
+                            System.out.println("Mobile control right Activate");
                             new Thread(){
                                 @Override
                                 public void run(){
                                     try {
-                                        DroneControl("right",length);
+                                        DroneControl("right",1);
                                     } catch (MqttException e) {
                                         e.printStackTrace();
                                     }
@@ -231,17 +258,20 @@ public class ServiceDialog04Controller implements Initializable {
                             }.start();
                         }
                         else if(jsonObject.get("direction").equals("left")){
+                            System.out.println("Mobile control left Activate");
                             new Thread(){
                                 @Override
                                 public void run(){
                                     try {
-                                        DroneControl("left",length);
+                                        System.out.println("");
+                                        DroneControl("left",1);
                                     } catch (MqttException e) {
                                         e.printStackTrace();
                                     }
                                 }
                             }.start();
                         }
+                        System.out.println("done control");
                     }
                 }
 
@@ -254,6 +284,7 @@ public class ServiceDialog04Controller implements Initializable {
         }
 
         public void DroneControl(String message, int speed) throws MqttException {
+            System.out.println("Mobile DroneControl Activate");
             JSONObject controlJson = new JSONObject();
             controlJson.put("msgid","MAVJSON_MSG_ID_FINE_CONTROL");
             if(message.equals("up")){
@@ -286,6 +317,19 @@ public class ServiceDialog04Controller implements Initializable {
                 System.out.println("Done Published Message to Raspi Magnet");
             } catch (MqttException e) {
                 System.out.println(e.getMessage());
+                e.printStackTrace();
+            }
+        }
+
+        public void supplyDone(){
+
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.put("msgid","drop");
+            try {
+                System.out.println("Try Publish Android that mission finished");
+                client.publish("/andorid/page2", jsonObject.toString().getBytes(), 0, false);
+                System.out.println("Done Publish Android that mission finished");
+            } catch (MqttException e) {
                 e.printStackTrace();
             }
         }

@@ -173,6 +173,7 @@ public class MissionRequestingController implements Initializable {
                     String strmsg = new String(data);
                     System.out.println("String : " + strmsg);
                     JSONArray array = null;
+                    /*
                     try{
                         array = new JSONArray(strmsg);
                         System.out.println(array.get(1));
@@ -180,14 +181,19 @@ public class MissionRequestingController implements Initializable {
                     catch (Exception e){
                         e.printStackTrace();
                     }
-
+                    */
                     // System.out.println("JsonArray : " + array);
-                    System.out.println("JsonArray : " + array.get(0).toString());
+                    // System.out.println("JsonArray : " + array.get(0).toString());
+                    /*
                     for(int i = 0 ; i < array.length() ; i++){
                         System.out.println(array.get(i).toString());
                     }
+                     */
                     missions = new JSONArray(strmsg);
                     // 무엇인가 받으면 박스 재 배치
+                    if(strmsg == null){
+
+                    }
                     Platform.runLater(new Runnable() {
                         @Override
                         public void run() {

@@ -120,7 +120,7 @@ public class GcsMainController implements Initializable {
 	// 미션 수행 완료 트리거
 	private int missionDone = 0;
 
-	private int currentMissionNumber = 0;
+	private int currentMissionNumber = -1;
 	private int droneNumber = 2;
 
 	// 미션 시작 전 : 0,  미션 시작 : 1, 미션 종료 : 2.
@@ -500,6 +500,19 @@ public class GcsMainController implements Initializable {
 				drone.disconnect();
 				btnConnect.setText("연결하기");
 				btnArm.setText("시동걸기");
+				new Thread(){
+					@Override
+					public void run(){
+						try {
+							fcMqttClient.client.disconnect();
+							fcMqttClient.client.close();
+							gcsMainMqtt.client.disconnect();
+							gcsMainMqtt.client.close();
+						} catch (MqttException e) {
+							e.printStackTrace();
+						}
+					}
+				}.start();
 			}
 		}
 	};
@@ -755,6 +768,15 @@ public class GcsMainController implements Initializable {
 		}
 	};
 
+	public void pushX(){
+		new Thread(){
+			@Override
+			public void run() {
+				gcsMainMqtt.resetDrone();
+			}
+		}.start();
+	}
+
 	// 이벤트 핸들러 ----------------------------------------------------------------
 
 
@@ -843,10 +865,10 @@ public class GcsMainController implements Initializable {
 										}
 									}.start();
 									// 이게 수행되기 전에 한번 더 돌아서 service04가 두번 실행되는 경우가 있음
+									//
 									Platform.runLater(new Runnable() {
 										@Override
 										public void run() {
-
 											try {
 												System.out.println("Service04 Activated");
 												ServiceDialog04 serviceDialog04 = new ServiceDialog04();
@@ -877,6 +899,7 @@ public class GcsMainController implements Initializable {
 								object.put("msgid", "droneGps");
 								object.put("lat", gpsLat);
 								object.put("lng", gpsLng);
+								object.put("missionNumber", currentMissionNumber);
 								// 목적지 까지 간 다음에는 굳이 다시 보낼 필요는 없으니까
 								if(missionDone == 1){
 									System.out.println("when missionDone is 1. than clear the marker");
@@ -1104,6 +1127,22 @@ public class GcsMainController implements Initializable {
 				e.printStackTrace();
 			}
 		}
+
+
+		public void resetDrone(){
+
+			JSONObject jsonObject = new JSONObject();
+			jsonObject.put("msgid", "droneReset");
+			jsonObject.put("droneNumber", GcsMain.instance.controller.getDroneNumber());
+			jsonObject.put("missionNumber" , currentMissionNumber);
+			try {
+				System.out.println("resetDrone Try");
+				client.publish("/web/missionStatus" , jsonObject.toString().getBytes(), 0 , false);
+				System.out.println("resetDrone Done");
+			} catch (MqttException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 
 	public void rootSetMethod(){
@@ -1177,6 +1216,7 @@ public class GcsMainController implements Initializable {
 		//GcsMain.instance.controller.flightMap.controller.missionMake();
 		GcsMain.instance.controller.flightMap.controller.setMissionItems_Customize(array);
 	}
+
 
 
 }
