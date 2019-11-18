@@ -24,8 +24,10 @@ public class X_PublishTest_MobileControl {
         }
 
         JSONObject jsonObject = new JSONObject();
-        jsonObject.put("msgid", "emergency");
-
+        //jsonObject.put("msgid", "emergency");
+        jsonObject.put("msgid", "control");
+        jsonObject.put("direction", "up");
+        jsonObject.put("speed", 1);
         try {
             System.out.println("Publish Try");
             client.publish("/gcs/droneManual", jsonObject.toString().getBytes(), 0, false);

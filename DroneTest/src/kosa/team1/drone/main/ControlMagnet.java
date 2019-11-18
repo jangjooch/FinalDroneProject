@@ -100,6 +100,6 @@ public class ControlMagnet {
 
             }
         });
-        client.subscribe("/jang/drone");
+        client.subscribe("/drone/magnet/sub");
     }
 }

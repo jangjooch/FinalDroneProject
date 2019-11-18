@@ -106,7 +106,6 @@ public class MissionRequestingController implements Initializable {
                                 missionMqttClient.SendMissionStart((Integer) mission.get("missionNumber"));
                                 Stage stage = (Stage) btnCancel.getScene().getWindow();
                                 System.out.println("Requesting missionReady");
-                                JSONObject endRequest = new JSONObject();
                                 stage.close();
                             }
                             catch (Exception e){
@@ -214,14 +213,16 @@ public class MissionRequestingController implements Initializable {
         }
 
         public void SendMissionStart(int MSNumber){
+            int dNumber = GcsMain.instance.controller.getDroneNumber();
+
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("msgid", "missionStart");
             jsonObject.put("missionNumber", MSNumber);
-            jsonObject.put("droneNumber", 2);
+            jsonObject.put("droneNumber", dNumber);
             jsonObject.put("needs", "missionReady");
             try {
                 System.out.println("Try Sending Mission Start. " + MSNumber);
-                client.publish("/web/missionStatus", jsonObject.toString().getBytes(), 0, false);
+                client.publish("/web/missionStatus/test", jsonObject.toString().getBytes(), 0, false);
                 System.out.println("Publish Done MissionStart. " + MSNumber);
             } catch (MqttException e) {
                 System.out.println("Publish Error Mission Start. " + MSNumber);

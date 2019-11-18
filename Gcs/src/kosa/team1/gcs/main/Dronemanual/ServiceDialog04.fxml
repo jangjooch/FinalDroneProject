@@ -8,7 +8,7 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.Font?>
 
-<BorderPane prefHeight="579.0" prefWidth="346.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="kosa.team1.gcs.main.Dronemanual.ServiceDialog04Controller">
+<BorderPane prefHeight="443.0" prefWidth="346.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="kosa.team1.gcs.main.Dronemanual.ServiceDialog04Controller">
    <center>
       <BorderPane prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER">
          <top>
@@ -26,7 +26,7 @@
       </BorderPane>
    </center>
    <bottom>
-      <HBox prefHeight="236.0" prefWidth="304.0" BorderPane.alignment="CENTER">
+      <HBox prefWidth="346.0" BorderPane.alignment="CENTER">
          <children>
             <Button fx:id="Btn_Drop" alignment="CENTER" contentDisplay="CENTER" minHeight="100.0" minWidth="100.0" mnemonicParsing="false" text="Drop" textAlignment="CENTER">
                <font>

@@ -159,7 +159,7 @@ public class GcsMainController implements Initializable {
 		//
 		btnMissionReady.setOnAction(btnMissionReadyHandler);
 		btnRootSet.setOnAction(btnRootSetHandler);
-
+		btnPackage.setOnAction(btnPackageHandler);
 		drone = new Drone();
 
 		initHud();
@@ -764,6 +764,10 @@ public class GcsMainController implements Initializable {
 		this.currentMissionNumber = missionNumber;
 	}
 
+	public int getDroneNumber(){
+		return this.droneNumber;
+	}
+
 
 	// FC 에서 Publish 하는 정보를 읽어낼 클라이언트
 	public class FCMqttClient{
@@ -953,13 +957,24 @@ public class GcsMainController implements Initializable {
 
 			JSONObject settingRoot = new JSONObject();
 			JSONArray totalRoot = GcsMain.instance.controller.flightMap.controller.getMissionItems();
-			JSONArray spotRoot = new JSONArray();
+			JSONArray spotRoot = new JSONArray(); // web에 보낼 거
+			JSONArray mobileRoot = new JSONArray();
+			int seqStatus = 0;
 
 			for(int i = 0 ; i < totalRoot.length() ; i++){
 				JSONObject jsonObject = (JSONObject) totalRoot.get(i);
 				int getCommand = jsonObject.getInt("command");
-				if(getCommand == 16){
-					spotRoot.put(jsonObject);
+				if(getCommand == 16){ // command 16은 이동 명령 중
+					spotRoot.put(jsonObject); // 기록이니 다넣고
+
+					if((int)jsonObject.get("seq") == 0){
+						mobileRoot.put(jsonObject); // 모바일 용은 0번째와
+					}
+					else if((int)jsonObject.get("seq") - 1 == seqStatus){
+						seqStatus = (int)jsonObject.get("seq"); // 이후 delay 이전까지 모든 내용을 저장
+						mobileRoot.put(jsonObject);
+					}
+
 					// 이동 명령 spot 만 전송할 것이다.
 				}
 			}
@@ -973,6 +988,7 @@ public class GcsMainController implements Initializable {
 				jsonObject.put("msgid", "missionStatus");
 				jsonObject.put("status", "missionStart");
 				jsonObject.put("missionNumber",currentMissionNumber);
+				jsonObject.put("missionSpots", mobileRoot.toString()); // mobile은 toString해서 보내달라 했으니 toString 해서
 				System.out.println("missionNumber : " + currentMissionNumber);
 				client.publish("/android/page1", jsonObject.toString().getBytes(), 0, false);
 				//client.publish("/web/missionStatus", jsonObject.toString().getBytes(), 0, false);
@@ -1082,7 +1098,7 @@ public class GcsMainController implements Initializable {
 			jsonObject.put("magnet", "on");
 			try {
 				System.out.println("Trying Magnet Activate Publish");
-				client.publish("/drone/magnet/pub", jsonObject.toString().getBytes(), 0, false);
+				client.publish("/drone/magnet/sub", jsonObject.toString().getBytes(), 0, false);
 				System.out.println("Done Magnet Activate Publish");
 			} catch (MqttException e) {
 				e.printStackTrace();

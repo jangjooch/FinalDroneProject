@@ -6,6 +6,7 @@ import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
 import javafx.scene.control.TextArea;
+import javafx.stage.Stage;
 import org.eclipse.paho.client.mqttv3.*;
 import org.json.JSONObject;
 import kosa.team1.gcs.main.GcsMain;
@@ -61,7 +62,11 @@ public class ServiceDialog04Controller implements Initializable {
             if(mobileRequest){
                 String msg = "off";
                 raspiMqttClient.ControlMagnet();
+                raspiMqttClient.takeSnapShot();
                 System.out.println("Published Message to Raspi Magnet " + msg);
+                Stage stage = (Stage) Btn_Drop.getScene().getWindow();
+                System.out.println("Magent Drop Done");
+                stage.close();
             }
             else{
                 System.out.println("Mobile is Control");
@@ -173,23 +178,69 @@ public class ServiceDialog04Controller implements Initializable {
                     if(jsonObject.get("msgid").equals("emergency")){
                         mobileRequest = true;
                         textAreaAlternative.setText("GCS Control");
+                        Stage stage = (Stage) Btn_Drop.getScene().getWindow();
+                        System.out.println("Magent Drop Done");
+                        stage.close();
                     }
                     else if(jsonObject.get("msgid").equals("control")){
                         int length = (int) jsonObject.get("speed");
                         if(jsonObject.get("magent").equals("off")){
                             ControlMagnet();
+                            takeSnapShot();
+                            // drop 되면 화면 꺼지도록
+                            Stage stage = (Stage) Btn_Drop.getScene().getWindow();
+                            System.out.println("Magent Drop Done");
+                            stage.close();
                         }
                         else if(jsonObject.get("direction").equals("up")){
-                            DroneControl("up", length);
+
+                            new Thread(){
+                                @Override
+                                public void run(){
+                                    try {
+                                        DroneControl("up",length);
+                                    } catch (MqttException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            }.start();
+
                         }
                         else if(jsonObject.get("direction").equals("down")){
-                            DroneControl("down", length);
+                            new Thread(){
+                                @Override
+                                public void run(){
+                                    try {
+                                        DroneControl("down",length);
+                                    } catch (MqttException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            }.start();
                         }
                         else if(jsonObject.get("direction").equals("right")){
-                            DroneControl("right", length);
+                            new Thread(){
+                                @Override
+                                public void run(){
+                                    try {
+                                        DroneControl("right",length);
+                                    } catch (MqttException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            }.start();
                         }
                         else if(jsonObject.get("direction").equals("left")){
-                            DroneControl("left", length);
+                            new Thread(){
+                                @Override
+                                public void run(){
+                                    try {
+                                        DroneControl("left",length);
+                                    } catch (MqttException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            }.start();
                         }
                     }
                 }
@@ -206,21 +257,22 @@ public class ServiceDialog04Controller implements Initializable {
             JSONObject controlJson = new JSONObject();
             controlJson.put("msgid","MAVJSON_MSG_ID_FINE_CONTROL");
             if(message.equals("up")){
-                controlJson.put("velocityNorth", 1);
+                controlJson.put("velocityNorth", speed);
                 controlJson.put("velocityEast", 0);
             }
             else if(message.equals("down")){
-                controlJson.put("velocityNorth", -1);
+                controlJson.put("velocityNorth", -speed);
                 controlJson.put("velocityEast", 0);
             }
             else if(message.equals("right")){
                 controlJson.put("velocityNorth", 0);
-                controlJson.put("velocityEast", 1);
+                controlJson.put("velocityEast", speed);
             }
             else if(message.equals("left")){
                 controlJson.put("velocityNorth", 0);
-                controlJson.put("velocityEast", -1);
+                controlJson.put("velocityEast", -speed);
             }
+
             client.publish("/drone/fc/sub", controlJson.toString().getBytes(), 0, false);
             System.out.println("Published Message to Raspi Direction " + message);
         }
@@ -230,7 +282,7 @@ public class ServiceDialog04Controller implements Initializable {
                 JSONObject jsonObject = new JSONObject();
                 jsonObject.put("magnet","off");
                 System.out.println("Try Publish Message to Raspi Magnet");
-                client.publish("/drone/magnet/pub", jsonObject.toString().getBytes(), 0, false);
+                client.publish("/drone/magnet/sub", jsonObject.toString().getBytes(), 0, false);
                 System.out.println("Done Published Message to Raspi Magnet");
             } catch (MqttException e) {
                 System.out.println(e.getMessage());
@@ -242,7 +294,7 @@ public class ServiceDialog04Controller implements Initializable {
 
             try {
                 JSONObject jsonObject = new JSONObject();
-                jsonObject.put("msgid", "SaveSnapShot");
+                jsonObject.put("msgid", "saveSnapShot");
                 jsonObject.put("snapShot", true);
                 client.publish("/drone/cam0/gcs",jsonObject.toString().getBytes(),0,false);
             }

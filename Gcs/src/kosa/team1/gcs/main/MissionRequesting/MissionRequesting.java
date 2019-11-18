@@ -16,7 +16,7 @@ public class MissionRequesting {
     //Constructor
     public MissionRequesting() {
         try {
-            stage = new Stage(StageStyle.UTILITY);
+            stage = new Stage(StageStyle.UNIFIED);
             //stage.initModality(Modality.WINDOW_MODAL);
             stage.initOwner(GcsMain.instance.primaryStage);
             BorderPane pane =
