@@ -39,6 +39,6 @@
       <Insets />
    </opaqueInsets>
    <top>
-      <Label fx:id="labelStatus" alignment="CENTER" contentDisplay="CENTER" prefHeight="43.0" prefWidth="369.0" text="Android Control" textOverrun="CLIP" BorderPane.alignment="CENTER" />
+      <Label fx:id="labelStatus" alignment="CENTER" contentDisplay="CENTER" prefHeight="43.0" prefWidth="369.0" text="Android Control" textOverrun="CLIP" BorderPane.alignment="CENTER" textFill="black"/>
    </top>
 </BorderPane>

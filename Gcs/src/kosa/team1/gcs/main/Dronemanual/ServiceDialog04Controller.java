@@ -8,6 +8,8 @@ import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.Paint;
 import javafx.stage.Stage;
 import org.eclipse.paho.client.mqttv3.*;
 import org.json.JSONObject;
@@ -27,6 +29,8 @@ public class ServiceDialog04Controller implements Initializable {
     // GCS 에서 버튼을 누렀을 때, 실행 될 수 있도록 함
     // true 라고 한다면 GCS 에서 드론을 제어할 수 있도록 한다.
 
+    public Thread sendingThread;
+
     public ServiceDialog04Controller() throws MqttException {
         GcsMain.instance.controller.flightMap.controller.setMode("GUIDED");
         mobileRequest = false;
@@ -34,8 +38,20 @@ public class ServiceDialog04Controller implements Initializable {
         raspiMqttClient = new RaspiMqttClient();
         System.out.println("RaspiMqttClient client Created");
 
-        System.out.println("MobileRequest : " + mobileRequest);
-
+        sendingThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while(true){
+                    raspiMqttClient.sendGpsToAndroid();
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        });
+        sendingThread.start();
     }
 
     @FXML private Button Btn_Up;
@@ -66,6 +82,7 @@ public class ServiceDialog04Controller implements Initializable {
                 raspiMqttClient.takeSnapShot();
                 raspiMqttClient.supplyDone();
                 raspiMqttClient.ResetDroneAlt();
+                sendingThread.interrupt();
                 System.out.println("Published Message to Raspi Magnet " + msg);
                 Stage stage = (Stage) Btn_Drop.getScene().getWindow();
                 System.out.println("Magent Drop Done");
@@ -187,7 +204,22 @@ public class ServiceDialog04Controller implements Initializable {
                         if(jsonObject.get("msgid").equals("emergency")){
                             System.out.println("try Emergency");
                             mobileRequest = true;
-                            labelStatus.setText("GCS Now Control");
+
+                            Platform.runLater(new Runnable() {
+                                @Override
+                                public void run() {
+                                    try {
+                                        System.out.println("Try Label Change");
+                                        labelStatus.setText("GCS Control");
+                                        labelStatus.setTextFill(Color.BLACK);
+                                        System.out.println("Done Label Change");
+                                    }
+                                    catch (Exception e){
+                                        e.printStackTrace();
+                                    }
+                                }
+                            });
+
                             System.out.println("done Emergency");
                             //Stage stage = (Stage) Btn_Drop.getScene().getWindow();
                             //System.out.println("Magent Drop Done");
@@ -204,6 +236,7 @@ public class ServiceDialog04Controller implements Initializable {
                                     try {
                                         System.out.println("Try Label Change");
                                         labelStatus.setText(forLabel);
+                                        labelStatus.setTextFill(Color.BLACK);
                                         System.out.println("Done Label Change");
                                     }
                                     catch (Exception e){
@@ -222,6 +255,7 @@ public class ServiceDialog04Controller implements Initializable {
                                         takeSnapShot();
                                         supplyDone();
                                         raspiMqttClient.ResetDroneAlt();
+                                        sendingThread.interrupt();
                                         System.out.println("Magent Drop Done");
                                     }
                                 }.start();
@@ -247,7 +281,7 @@ public class ServiceDialog04Controller implements Initializable {
                                     @Override
                                     public void run(){
                                         try {
-                                            DroneControl("up",1);
+                                            DroneControl("up",length);
                                         } catch (MqttException e) {
                                             e.printStackTrace();
                                         }
@@ -261,7 +295,7 @@ public class ServiceDialog04Controller implements Initializable {
                                     @Override
                                     public void run(){
                                         try {
-                                            DroneControl("down",1);
+                                            DroneControl("down",length);
                                         } catch (MqttException e) {
                                             e.printStackTrace();
                                         }
@@ -274,7 +308,7 @@ public class ServiceDialog04Controller implements Initializable {
                                     @Override
                                     public void run(){
                                         try {
-                                            DroneControl("right",1);
+                                            DroneControl("right",length);
                                         } catch (MqttException e) {
                                             e.printStackTrace();
                                         }
@@ -287,7 +321,7 @@ public class ServiceDialog04Controller implements Initializable {
                                     @Override
                                     public void run(){
                                         try {
-                                            DroneControl("left",1);
+                                            DroneControl("left",length);
                                         } catch (MqttException e) {
                                             e.printStackTrace();
                                         }
@@ -328,6 +362,28 @@ public class ServiceDialog04Controller implements Initializable {
                 }
             });
             client.subscribe("/gcs/droneManual");
+
+        }
+
+        public void sendGpsToAndroid(){
+
+            double currLat = Double.parseDouble(GcsMain.instance.controller.getCurrLat());
+            double currLng = Double.parseDouble(GcsMain.instance.controller.getCurrLng());
+            double currAlt = Double.parseDouble(GcsMain.instance.controller.getCurrAlt());
+
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.put("msgid", "droneStatus");
+            jsonObject.put("lat", currLat);
+            jsonObject.put("lng", currLng);
+            jsonObject.put("alt" , currAlt);
+
+            try {
+                System.out.println("try Sending Drone Status");
+                client.publish("/android/page2", jsonObject.toString().getBytes(), 0, false);
+                System.out.println("done Sending Drone Status");
+            } catch (MqttException e) {
+                e.printStackTrace();
+            }
         }
 
         public void DroneControl(String message, int speed) throws MqttException {
@@ -444,7 +500,7 @@ public class ServiceDialog04Controller implements Initializable {
                 JSONObject jsonObject = new JSONObject();
                 jsonObject.put("msgid", "saveSnapShot");
                 jsonObject.put("snapShot", true);
-                client.publish("/drone/cam0/gcs",jsonObject.toString().getBytes(),0,false);
+                client.publish("/drone/cam1/gcs",jsonObject.toString().getBytes(),0,false);
                 System.out.println("Test SnapShot Done");
             }
             catch (Exception e){

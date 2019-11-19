@@ -27,11 +27,11 @@ public class X_TestPublish_drop {
         jsonObject.put("msgid", "control");
         jsonObject.put("direction", "up");
         jsonObject.put("speed", 1);
-        jsonObject.put("missionNumber", 87);
+        jsonObject.put("missionNumber", 4);
         System.out.println(jsonObject.toString());
         try {
             System.out.println("Publish Try");
-            client.publish("/drone/cam0/gcs", jsonObject.toString().getBytes(), 0, false);
+            client.publish("/drone/cam1/gcs", jsonObject.toString().getBytes(), 0, false);
             System.out.println("Publish Done");
 
         } catch (MqttException e) {

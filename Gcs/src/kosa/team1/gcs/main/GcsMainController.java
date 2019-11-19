@@ -130,6 +130,9 @@ public class GcsMainController implements Initializable {
 	private String currLat;
 	private String currLng;
 	private String currAlt;
+
+	ServiceDialog04 serviceDialog04;
+
 	//---------------------------------------------------------------------------------
 	@Override
 	public void initialize(URL location, ResourceBundle resources) {
@@ -939,7 +942,7 @@ public class GcsMainController implements Initializable {
 										public void run() {
 											try {
 												System.out.println("Service04 Activated");
-												ServiceDialog04 serviceDialog04 = new ServiceDialog04();
+												serviceDialog04 = new ServiceDialog04();
 												serviceDialog04.show();
 												System.out.println("Service04 Successfully Done");
 											}
@@ -1131,6 +1134,22 @@ public class GcsMainController implements Initializable {
 				System.out.println(e.getMessage());
 				e.printStackTrace();
 			}
+
+			Platform.runLater(new Runnable() {
+				@Override
+				public void run() {
+					try {
+						System.out.println("Service04 Close Try");
+						serviceDialog04.close();
+						System.out.println("Service04 Close Done");
+					}
+					catch (Exception e){
+						e.printStackTrace();
+					}
+				}
+			});
+
+
 		}
 	}
 
