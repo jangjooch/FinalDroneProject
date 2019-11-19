@@ -6,6 +6,7 @@ import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.stage.Stage;
 import org.eclipse.paho.client.mqttv3.*;
@@ -42,7 +43,7 @@ public class ServiceDialog04Controller implements Initializable {
     @FXML private Button Btn_Right;
     @FXML private Button Btn_Left;
     @FXML private Button Btn_Drop;
-    @FXML private TextArea textAreaAlternative;
+    @FXML private Label labelStatus;
 
 
     @Override
@@ -63,6 +64,8 @@ public class ServiceDialog04Controller implements Initializable {
                 String msg = "off";
                 raspiMqttClient.ControlMagnet();
                 raspiMqttClient.takeSnapShot();
+                raspiMqttClient.supplyDone();
+                raspiMqttClient.ResetDroneAlt();
                 System.out.println("Published Message to Raspi Magnet " + msg);
                 Stage stage = (Stage) Btn_Drop.getScene().getWindow();
                 System.out.println("Magent Drop Done");
@@ -184,7 +187,7 @@ public class ServiceDialog04Controller implements Initializable {
                         if(jsonObject.get("msgid").equals("emergency")){
                             System.out.println("try Emergency");
                             mobileRequest = true;
-                            textAreaAlternative.setText("GCS Control");
+                            labelStatus.setText("GCS Now Control");
                             System.out.println("done Emergency");
                             //Stage stage = (Stage) Btn_Drop.getScene().getWindow();
                             //System.out.println("Magent Drop Done");
@@ -193,7 +196,22 @@ public class ServiceDialog04Controller implements Initializable {
                         else if(jsonObject.get("msgid").equals("control")){
                             System.out.println("try control");
                             int length = (int) jsonObject.get("speed");
-                            System.out.println("Moobile Control "+ jsonObject.get("direction") + " " + length );
+                            System.out.println("Mobile Control "+ jsonObject.get("direction") + " " + length);
+                            String forLabel = "Mobile Control "+ jsonObject.get("direction") + " " + length;
+                            Platform.runLater(new Runnable() {
+                                @Override
+                                public void run() {
+                                    try {
+                                        System.out.println("Try Label Change");
+                                        labelStatus.setText(forLabel);
+                                        System.out.println("Done Label Change");
+                                    }
+                                    catch (Exception e){
+                                        e.printStackTrace();
+                                    }
+                                }
+                            });
+
                             if(jsonObject.get("magnet").equals("off")){
                                 System.out.println("Mobile Magnet Off Activate");
                                 new Thread(){
@@ -203,6 +221,7 @@ public class ServiceDialog04Controller implements Initializable {
                                         ControlMagnet();
                                         takeSnapShot();
                                         supplyDone();
+                                        raspiMqttClient.ResetDroneAlt();
                                         System.out.println("Magent Drop Done");
                                     }
                                 }.start();
@@ -268,11 +287,33 @@ public class ServiceDialog04Controller implements Initializable {
                                     @Override
                                     public void run(){
                                         try {
-                                            System.out.println("");
                                             DroneControl("left",1);
                                         } catch (MqttException e) {
                                             e.printStackTrace();
                                         }
+                                    }
+                                }.start();
+                            }
+                            else if(jsonObject.get("direction").equals("high")){
+                                System.out.println("Mobile control high");
+                                new Thread(){
+                                    @Override
+                                    public void run() {
+                                        System.out.println("Try High DroneAltControl");
+                                        DroneAltControl("high", length);
+                                        System.out.println("Done High DroneAltControl");
+                                    }
+                                }.start();
+                            }
+
+                            else if(jsonObject.get("direction").equals("low")){
+                                System.out.println("Mobile control low");
+                                new Thread(){
+                                    @Override
+                                    public void run() {
+                                        System.out.println("Try Low DroneAltControl");
+                                        DroneAltControl("low", length);
+                                        System.out.println("Done Low DroneAltControl");
                                     }
                                 }.start();
                             }
@@ -312,6 +353,62 @@ public class ServiceDialog04Controller implements Initializable {
 
             client.publish("/drone/fc/sub", controlJson.toString().getBytes(), 0, false);
             System.out.println("Published Message to Raspi Direction " + message);
+        }
+
+        public void DroneAltControl(String way, int alt){
+            double Currlat = Double.parseDouble(GcsMain.instance.controller.getCurrLat());
+            double Currlng = Double.parseDouble(GcsMain.instance.controller.getCurrLng());
+            double Curralt = Double.parseDouble(GcsMain.instance.controller.getCurrAlt());
+            double calculatedAlt = 0;
+            if(way.equals("high")){
+                calculatedAlt = Curralt + alt;
+            }
+            else {
+                calculatedAlt = Curralt - alt;
+            }
+
+            if(calculatedAlt < 3){
+                calculatedAlt = 3;
+            }
+            System.out.println("Mobile DroneAltControl Activate");
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.put("msgid", "SET_POSITION_TARGET_GLOBAL_INT");
+            jsonObject.put("lng", Currlng);
+            jsonObject.put("lat", Currlat);
+            jsonObject.put("alt", calculatedAlt);
+            try {
+                System.out.println("Try Alt Control");
+                client.publish("/drone/fc/sub", jsonObject.toString().getBytes(), 0, false);
+                System.out.println("Done Alt Control");
+            } catch (MqttException e) {
+                e.printStackTrace();
+            }
+            System.out.println("Published Message to Raspi Direction " + jsonObject.toString());
+        }
+
+        public void ResetDroneAlt(){
+            double Currlat = Double.parseDouble(GcsMain.instance.controller.getCurrLat());
+            double Currlng = Double.parseDouble(GcsMain.instance.controller.getCurrLng());
+            // double Curralt = Double.parseDouble(GcsMain.instance.controller.getCurrAlt());
+            double calculatedAlt = 10;
+            if(calculatedAlt < 3){
+                calculatedAlt = 3;
+            }
+            System.out.println("Reset Drone Alt");
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.put("msgid", "SET_POSITION_TARGET_GLOBAL_INT");
+            jsonObject.put("lng", Currlng);
+            jsonObject.put("lat", Currlat);
+            jsonObject.put("alt", calculatedAlt);
+
+            try {
+                System.out.println("Try Alt Control");
+                client.publish("/drone/fc/sub", jsonObject.toString().getBytes(), 0, false);
+                System.out.println("Done Alt Control");
+            } catch (MqttException e) {
+                e.printStackTrace();
+            }
+            System.out.println("Published Message to Raspi Direction " + jsonObject.toString());
         }
 
         public void ControlMagnet(){

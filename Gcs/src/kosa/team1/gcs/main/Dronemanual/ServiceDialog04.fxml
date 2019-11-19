@@ -35,14 +35,10 @@
             </Button>
          </children></HBox>
    </bottom>
-   <top>
-      <TextArea fx:id="textAreaAlternative" prefHeight="40.0" prefWidth="200.0" promptText="Android Control" BorderPane.alignment="CENTER_RIGHT">
-         <font>
-            <Font size="14.0" />
-         </font></TextArea>
-
-   </top>
    <opaqueInsets>
       <Insets />
    </opaqueInsets>
+   <top>
+      <Label fx:id="labelStatus" alignment="CENTER" contentDisplay="CENTER" prefHeight="43.0" prefWidth="369.0" text="Android Control" textOverrun="CLIP" BorderPane.alignment="CENTER" />
+   </top>
 </BorderPane>

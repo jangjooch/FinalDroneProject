@@ -26,7 +26,7 @@ public class X_PublishTest_MobileControl {
         JSONObject jsonObject = new JSONObject();
         //jsonObject.put("msgid", "emergency");
         jsonObject.put("msgid", "control");
-        jsonObject.put("direction", "up");
+        jsonObject.put("direction", "high");
         jsonObject.put("speed", 1);
         jsonObject.put("magnet", "off");
         System.out.println(jsonObject.toString());

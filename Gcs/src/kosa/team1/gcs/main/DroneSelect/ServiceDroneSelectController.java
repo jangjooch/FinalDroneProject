@@ -113,16 +113,12 @@ public class ServiceDroneSelectController implements Initializable {
                             //System.out.println(lblNo.getText());
                             GcsMain.instance.controller.setDroneNumber((int)jsonobject.get("DroneNum"));
                             mqttSendToWeb(lblNo.getText());
-
                             Stage stage = (Stage) btnDroneSelect.getScene().getWindow();
                             stage.close();
                         }
                     });
-
-
                     index ++;
                     }
-
                 }
 
         } catch(Exception e) {
@@ -202,11 +198,11 @@ public class ServiceDroneSelectController implements Initializable {
                 @Override
                 public void run() {
                     try {
-
+                        int getReNum = GcsMain.instance.controller.getReNumber();
                         JSONObject jsonObject = new JSONObject();
                         jsonObject.put("msgid", "DroneSelect");
                         jsonObject.put("DroneNum", DroneNumber);
-
+                        jsonObject.put("re_num", getReNum);
                         String json = jsonObject.toString();
                         System.out.println("Drone Select Pub to JSon data");
                         client.publish("/web/missionStatus", json.getBytes(), 0, false);

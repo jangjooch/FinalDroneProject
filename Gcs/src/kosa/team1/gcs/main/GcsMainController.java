@@ -125,6 +125,11 @@ public class GcsMainController implements Initializable {
 
 	// 미션 시작 전 : 0,  미션 시작 : 1, 미션 종료 : 2.
 	private int missionCurrentSeqTrigger = 0;
+
+	// 현재 드론 위치
+	private String currLat;
+	private String currLng;
+	private String currAlt;
 	//---------------------------------------------------------------------------------
 	@Override
 	public void initialize(URL location, ResourceBundle resources) {
@@ -788,22 +793,19 @@ public class GcsMainController implements Initializable {
 		}.start();
 	}
 
-	public void ResetTriggers(){
+	private void ResetTriggers(){
 		System.out.println("Reset All Status");
-		FCMqttClientTrigger_GPS = false;
-		FCMqttClientTrigger_Mission = false;
-		WebMissionInTrigger = false;
-		MissionUploadTrigger = false;
-		DroneControllerTrigger = 0;
-		gpsSendThread = 0;
-		missionDone = 0;
-		currentMissionNumber = -1;
-		droneNumber = -1;
-		missionCurrentSeqTrigger = 0;
+		this.FCMqttClientTrigger_GPS = false;
+		this.FCMqttClientTrigger_Mission = false;
+		this.WebMissionInTrigger = false;
+		this.MissionUploadTrigger = false;
+		this.DroneControllerTrigger = 0;
+		this.gpsSendThread = 0;
+		this.missionDone = 0;
+		this.currentMissionNumber = -1;
+		this.droneNumber = -1;
+		this.missionCurrentSeqTrigger = 0;
 	}
-
-	// 이벤트 핸들러 ----------------------------------------------------------------
-
 
 	public void setDestination(double getLat, double getLng, int missionNumber){
 		this.destinationLat = getLat;
@@ -813,6 +815,27 @@ public class GcsMainController implements Initializable {
 
 	public int getDroneNumber(){
 		return this.droneNumber;
+	}
+
+	public int getReNumber(){
+		return this.currentMissionNumber;
+	}
+	// 이벤트 핸들러 ----------------------------------------------------------------
+
+	public void setCurrGps(String lat, String lng, String alt){
+		this.currLat = lat;
+		this.currLng = lng;
+		this.currAlt = alt;
+	}
+
+	public String getCurrLat(){
+		return this.currLat;
+	}
+	public String getCurrLng(){
+		return this.currLng;
+	}
+	public String getCurrAlt(){
+		return this.currAlt;
 	}
 
 	public void setDroneNumber(int d_number){
@@ -862,6 +885,14 @@ public class GcsMainController implements Initializable {
 							FCMqttClientTrigger_Mission = true; // 이건 어디에 쓰는 지 흠
 						}
 
+						if(jsonObject.get("msgid").equals("GLOBAL_POSITION_INT")){
+							// 실시간 현재 위치값 저장
+							String getLat = String.valueOf(jsonObject.get("currLat"));
+							String getLng = String.valueOf(jsonObject.get("currLng"));
+							String getAlt = String.valueOf(jsonObject.get("alt"));
+							GcsMain.instance.controller.setCurrGps(getLat, getLng , getAlt);
+						}
+
 						if(jsonObject.get("msgid").equals("MISSION_CURRENT")){
 							int missionSize =  GcsMain.instance.controller.flightMap.controller.getMissionItems().length();
 							System.out.println("MissionSize : " + missionSize);
@@ -873,9 +904,16 @@ public class GcsMainController implements Initializable {
 									// 목적지 도달 이후 정상적인 RTL가 되었으면 완전한 미션 종료임으로
 									// 이를 웹에 전달한다.
 									missionCurrentSeqTrigger = 2;
-									fcMqttClient.SendMissionEndToWeb();
-									System.out.println("reset All Status");
-									ResetTriggers();
+									new Thread(){
+										@Override
+										public void run() {
+											fcMqttClient.SendMissionEndToWeb();
+											System.out.println("reset All Status Trigger");
+											GcsMain.instance.controller.ResetTriggers();
+											// ResetTriggers();
+											System.out.println("done reset All Status Trigger");
+										}
+									}.start();
 								}
 							}
 							if(missionCurrentSeq == missionSize / 2 + 1){
@@ -925,6 +963,7 @@ public class GcsMainController implements Initializable {
 								System.out.println("--------------");
 								gpsLat = String.valueOf(jsonObject.get("currLat"));
 								gpsLng = String.valueOf(jsonObject.get("currLng"));
+
 								JSONObject object = new JSONObject();
 								object.put("msgid", "droneGps");
 								object.put("lat", gpsLat);
@@ -1010,8 +1049,8 @@ public class GcsMainController implements Initializable {
 
 			JSONObject settingRoot = new JSONObject();
 			JSONArray totalRoot = GcsMain.instance.controller.flightMap.controller.getMissionItems();
-			JSONArray spotRoot = new JSONArray(); // web에 보낼 거
-			JSONArray mobileRoot = new JSONArray();
+			JSONArray spotRoot = new JSONArray(); // web에 보낼 거. 왕복
+			JSONArray mobileRoot = new JSONArray(); // mobile에 보낼 거. 편도
 			int seqStatus = 0;
 
 			for(int i = 0 ; i < totalRoot.length() ; i++){
@@ -1032,7 +1071,8 @@ public class GcsMainController implements Initializable {
 				}
 			}
 			settingRoot.put("msgid","missionSpots");
-			settingRoot.put("missionSpots",spotRoot);
+			settingRoot.put("missionSpots", mobileRoot);
+			//settingRoot.put("missionSpots",spotRoot);
 			settingRoot.put("missionNumber", currentMissionNumber);
 			settingRoot.put("droneNumber", droneNumber);
 			try{
