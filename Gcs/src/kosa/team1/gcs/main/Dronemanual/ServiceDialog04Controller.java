@@ -170,114 +170,114 @@ public class ServiceDialog04Controller implements Initializable {
 
                 @Override
                 public void messageArrived(String s, MqttMessage mqttMessage) throws Exception {
-                    if(new String(mqttMessage.getPayload()).equals("I'm going offline")){
-                        System.out.println("Fuck Stack");
-                    }
-                    else{
-
-                    }
                     System.out.println("Message Received from Mobile");
                     String getMsg = new String(mqttMessage.getPayload());
                     System.out.println("Received : " + getMsg);
-                    JSONObject jsonObject = new JSONObject(getMsg);
-                    System.out.println("Received Parsed Done : " + jsonObject.toString());
-
-                    if(jsonObject.get("msgid").equals("emergency")){
-                        System.out.println("try Emergency");
-                        mobileRequest = true;
-                        textAreaAlternative.setText("GCS Control");
-                        System.out.println("done Emergency");
-                        //Stage stage = (Stage) Btn_Drop.getScene().getWindow();
-                        //System.out.println("Magent Drop Done");
-                        //stage.close();
+                    if(new String(mqttMessage.getPayload()).contains("going")){
+                        System.out.println("Fuck Stack");
                     }
-                    else if(jsonObject.get("msgid").equals("control")){
-                        System.out.println("try control");
-                        int length = (int) jsonObject.get("speed");
-                        System.out.println("Moobile Control "+ jsonObject.get("direction") + " " + length );
-                        if(jsonObject.get("magnet").equals("off")){
-                            System.out.println("Mobile Magnet Off Activate");
-                            new Thread(){
-                                @Override
-                                public void run(){
-                                    System.out.println("Thread Run");
-                                    ControlMagnet();
-                                    takeSnapShot();
-                                    supplyDone();
-                                    System.out.println("Magent Drop Done");
-                                }
-                            }.start();
-                            Platform.runLater(new Runnable() {
-                                @Override
-                                public void run() {
-                                    try {
-                                        System.out.println("Drop To Close Stage");
-                                        Stage stage = (Stage) Btn_Drop.getScene().getWindow();
-                                        stage.close();
-                                        // drop 되면 화면 꺼지도록
-                                        System.out.println("Service04 Successfully Done");
-                                    }
-                                    catch (Exception e){
-                                        e.printStackTrace();
-                                    }
-                                }
-                            });
-                        }
-                        else if(jsonObject.get("direction").equals("up")){
-                            System.out.println("Mobile control up Activate");
-                            new Thread(){
-                                @Override
-                                public void run(){
-                                    try {
-                                        DroneControl("up",1);
-                                    } catch (MqttException e) {
-                                        e.printStackTrace();
-                                    }
-                                }
-                            }.start();
+                    else{
+                        System.out.println("Rightful Message Arrived");
+                        JSONObject jsonObject = new JSONObject(getMsg);
+                        System.out.println("Received Parsed Done : " + jsonObject.toString());
 
+                        if(jsonObject.get("msgid").equals("emergency")){
+                            System.out.println("try Emergency");
+                            mobileRequest = true;
+                            textAreaAlternative.setText("GCS Control");
+                            System.out.println("done Emergency");
+                            //Stage stage = (Stage) Btn_Drop.getScene().getWindow();
+                            //System.out.println("Magent Drop Done");
+                            //stage.close();
                         }
-                        else if(jsonObject.get("direction").equals("down")){
-                            System.out.println("Mobile control down Activate");
-                            new Thread(){
-                                @Override
-                                public void run(){
-                                    try {
-                                        DroneControl("down",1);
-                                    } catch (MqttException e) {
-                                        e.printStackTrace();
+                        else if(jsonObject.get("msgid").equals("control")){
+                            System.out.println("try control");
+                            int length = (int) jsonObject.get("speed");
+                            System.out.println("Moobile Control "+ jsonObject.get("direction") + " " + length );
+                            if(jsonObject.get("magnet").equals("off")){
+                                System.out.println("Mobile Magnet Off Activate");
+                                new Thread(){
+                                    @Override
+                                    public void run(){
+                                        System.out.println("Thread Run");
+                                        ControlMagnet();
+                                        takeSnapShot();
+                                        supplyDone();
+                                        System.out.println("Magent Drop Done");
                                     }
-                                }
-                            }.start();
-                        }
-                        else if(jsonObject.get("direction").equals("right")){
-                            System.out.println("Mobile control right Activate");
-                            new Thread(){
-                                @Override
-                                public void run(){
-                                    try {
-                                        DroneControl("right",1);
-                                    } catch (MqttException e) {
-                                        e.printStackTrace();
+                                }.start();
+                                Platform.runLater(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        try {
+                                            System.out.println("Drop To Close Stage");
+                                            Stage stage = (Stage) Btn_Drop.getScene().getWindow();
+                                            stage.close();
+                                            // drop 되면 화면 꺼지도록
+                                            System.out.println("Service04 Successfully Done");
+                                        }
+                                        catch (Exception e){
+                                            e.printStackTrace();
+                                        }
                                     }
-                                }
-                            }.start();
-                        }
-                        else if(jsonObject.get("direction").equals("left")){
-                            System.out.println("Mobile control left Activate");
-                            new Thread(){
-                                @Override
-                                public void run(){
-                                    try {
-                                        System.out.println("");
-                                        DroneControl("left",1);
-                                    } catch (MqttException e) {
-                                        e.printStackTrace();
+                                });
+                            }
+                            else if(jsonObject.get("direction").equals("up")){
+                                System.out.println("Mobile control up Activate");
+                                new Thread(){
+                                    @Override
+                                    public void run(){
+                                        try {
+                                            DroneControl("up",1);
+                                        } catch (MqttException e) {
+                                            e.printStackTrace();
+                                        }
                                     }
-                                }
-                            }.start();
+                                }.start();
+
+                            }
+                            else if(jsonObject.get("direction").equals("down")){
+                                System.out.println("Mobile control down Activate");
+                                new Thread(){
+                                    @Override
+                                    public void run(){
+                                        try {
+                                            DroneControl("down",1);
+                                        } catch (MqttException e) {
+                                            e.printStackTrace();
+                                        }
+                                    }
+                                }.start();
+                            }
+                            else if(jsonObject.get("direction").equals("right")){
+                                System.out.println("Mobile control right Activate");
+                                new Thread(){
+                                    @Override
+                                    public void run(){
+                                        try {
+                                            DroneControl("right",1);
+                                        } catch (MqttException e) {
+                                            e.printStackTrace();
+                                        }
+                                    }
+                                }.start();
+                            }
+                            else if(jsonObject.get("direction").equals("left")){
+                                System.out.println("Mobile control left Activate");
+                                new Thread(){
+                                    @Override
+                                    public void run(){
+                                        try {
+                                            System.out.println("");
+                                            DroneControl("left",1);
+                                        } catch (MqttException e) {
+                                            e.printStackTrace();
+                                        }
+                                    }
+                                }.start();
+                            }
+                            System.out.println("done control");
                         }
-                        System.out.println("done control");
                     }
                 }
 

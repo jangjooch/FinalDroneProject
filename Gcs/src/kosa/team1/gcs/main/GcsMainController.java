@@ -815,6 +815,9 @@ public class GcsMainController implements Initializable {
 		return this.droneNumber;
 	}
 
+	public void setDroneNumber(int d_number){
+		this.droneNumber = d_number;
+	}
 
 	// FC 에서 Publish 하는 정보를 읽어낼 클라이언트
 	public class FCMqttClient{

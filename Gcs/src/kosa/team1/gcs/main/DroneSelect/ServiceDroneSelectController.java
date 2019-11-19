@@ -10,6 +10,7 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import kosa.team1.gcs.main.GcsMain;
 import org.eclipse.paho.client.mqttv3.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -110,7 +111,7 @@ public class ServiceDroneSelectController implements Initializable {
                         @Override
                         public void handle(ActionEvent event) {
                             //System.out.println(lblNo.getText());
-
+                            GcsMain.instance.controller.setDroneNumber((int)jsonobject.get("DroneNum"));
                             mqttSendToWeb(lblNo.getText());
 
                             Stage stage = (Stage) btnDroneSelect.getScene().getWindow();
