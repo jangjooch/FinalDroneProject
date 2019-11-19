@@ -224,9 +224,10 @@ public class ServiceDroneSelectController implements Initializable {
                 public void run() {
                     try {
 
+                        int ReNum = GcsMain.instance.controller.getReNumber();
                         JSONObject jsonObject = new JSONObject();
                         jsonObject.put("msgid", "DroneRequest");
-
+                        jsonObject.put("re_num", ReNum);
                         String json = jsonObject.toString();
                         System.out.println("Drone Select Pub to JSon / request data");
                         client.publish("/web/missionStatus", json.getBytes(), 0, false);
