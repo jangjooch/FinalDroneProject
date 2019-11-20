@@ -1283,6 +1283,13 @@ public class GcsMainController implements Initializable {
 			idx++;
 			array.put(object);
 		}
+		// 고도 설정
+		for(int i = 0 ; i < array.length() ; i++){
+			JSONObject object = (JSONObject) array.get(i);
+			if(object.get("command").equals(16)){
+				object.put("z", 30);
+			}
+		}
 
 		// 마지막 root를 지우고 이를 RTL로 변경
 		JSONObject RTL = new JSONObject();
