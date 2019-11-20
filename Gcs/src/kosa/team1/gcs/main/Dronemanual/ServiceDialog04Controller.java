@@ -356,6 +356,7 @@ public class ServiceDialog04Controller implements Initializable {
                             }
                             System.out.println("done control");
                         }
+
                     }
                 }
 
@@ -452,16 +453,14 @@ public class ServiceDialog04Controller implements Initializable {
             double Currlat = Double.parseDouble(GcsMain.instance.controller.getCurrLat());
             double Currlng = Double.parseDouble(GcsMain.instance.controller.getCurrLng());
             // double Curralt = Double.parseDouble(GcsMain.instance.controller.getCurrAlt());
-            double calculatedAlt = 10;
-            if(calculatedAlt < 3){
-                calculatedAlt = 3;
-            }
+            double resetAlt = 30;
+
             System.out.println("Reset Drone Alt");
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("msgid", "SET_POSITION_TARGET_GLOBAL_INT");
             jsonObject.put("lng", Currlng);
             jsonObject.put("lat", Currlat);
-            jsonObject.put("alt", calculatedAlt);
+            jsonObject.put("alt", resetAlt);
 
             try {
                 System.out.println("Try Alt Control");

@@ -34,7 +34,7 @@ public class X_TestPublish_drop {
         JSONObject toWebService = new JSONObject();
         toWebService.put("msgid", "saveSnapShot");
         toWebService.put("snapShot", true);
-        toWebService.put("missionNumber", 4);
+        toWebService.put("missionNumber", 39);
         try {
             System.out.println("Publish Try");
             client.publish("/drone/cam1/gcs", toWebService.toString().getBytes(), 0, false);
