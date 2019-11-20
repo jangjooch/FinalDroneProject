@@ -8,6 +8,7 @@ import javafx.fxml.Initializable;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
+import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
@@ -1205,12 +1206,12 @@ public class GcsMainController implements Initializable {
 
 		public void MagentActivate(){
 
-			System.out.println("Magnet Off Control");
+			System.out.println("Magnet on Control");
 			JSONObject jsonObject = new JSONObject();
 			jsonObject.put("magnet", "on");
 			try {
 				System.out.println("Trying Magnet Activate Publish");
-				client.publish("/drone/magnet/sub", jsonObject.toString().getBytes(), 0, false);
+				client.publish("/jang/drone", jsonObject.toString().getBytes(), 0, false);
 				System.out.println("Done Magnet Activate Publish");
 			} catch (MqttException e) {
 				e.printStackTrace();

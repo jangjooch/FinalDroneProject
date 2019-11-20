@@ -28,10 +28,17 @@ public class X_TestPublish_drop {
         jsonObject.put("direction", "up");
         jsonObject.put("speed", 1);
         jsonObject.put("missionNumber", 4);
+        jsonObject.put("magnet","off");
         System.out.println(jsonObject.toString());
+
+        JSONObject toWebService = new JSONObject();
+        toWebService.put("msgid", "saveSnapShot");
+        toWebService.put("snapShot", true);
+        toWebService.put("missionNumber", 4);
         try {
             System.out.println("Publish Try");
-            client.publish("/drone/cam1/gcs", jsonObject.toString().getBytes(), 0, false);
+            client.publish("/drone/cam1/gcs", toWebService.toString().getBytes(), 0, false);
+            client.publish("/jang/drone", jsonObject.toString().getBytes(), 0 , false);
             System.out.println("Publish Done");
 
         } catch (MqttException e) {

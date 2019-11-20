@@ -42,16 +42,18 @@ public class ServiceDialog04Controller implements Initializable {
             @Override
             public void run() {
                 while(true){
-                    raspiMqttClient.sendGpsToAndroid();
+                    raspiMqttClient.sendAlt();
                     try {
                         Thread.sleep(1000);
                     } catch (InterruptedException e) {
+                        Thread.interrupted();
                         e.printStackTrace();
                     }
                 }
             }
         });
         sendingThread.start();
+
     }
 
     @FXML private Button Btn_Up;
@@ -178,6 +180,7 @@ public class ServiceDialog04Controller implements Initializable {
                 catch (MqttException e){
                     System.out.println(e.getMessage());
                 }
+
             }
 
             System.out.println("ServiceDialog04Controller RaspuMqttClient MQTT Connected");
@@ -364,6 +367,7 @@ public class ServiceDialog04Controller implements Initializable {
             client.subscribe("/gcs/droneManual");
 
         }
+        /*
 
         public void sendGpsToAndroid(){
 
@@ -385,6 +389,8 @@ public class ServiceDialog04Controller implements Initializable {
                 e.printStackTrace();
             }
         }
+
+         */
 
         public void DroneControl(String message, int speed) throws MqttException {
             System.out.println("Mobile DroneControl Activate");
@@ -472,7 +478,7 @@ public class ServiceDialog04Controller implements Initializable {
                 JSONObject jsonObject = new JSONObject();
                 jsonObject.put("magnet","off");
                 System.out.println("Try Publish Message to Raspi Magnet");
-                client.publish("/drone/magnet/sub", jsonObject.toString().getBytes(), 0, false);
+                client.publish("/jang/drone", jsonObject.toString().getBytes(), 0, false);
                 System.out.println("Done Published Message to Raspi Magnet");
             } catch (MqttException e) {
                 System.out.println(e.getMessage());
@@ -486,7 +492,7 @@ public class ServiceDialog04Controller implements Initializable {
             jsonObject.put("msgid","drop");
             try {
                 System.out.println("Try Publish Android that mission finished");
-                client.publish("/andorid/page2", jsonObject.toString().getBytes(), 0, false);
+                client.publish("/android/page2", jsonObject.toString().getBytes(), 0, false);
                 System.out.println("Done Publish Android that mission finished");
             } catch (MqttException e) {
                 e.printStackTrace();
@@ -500,6 +506,7 @@ public class ServiceDialog04Controller implements Initializable {
                 JSONObject jsonObject = new JSONObject();
                 jsonObject.put("msgid", "saveSnapShot");
                 jsonObject.put("snapShot", true);
+                jsonObject.put("missionNumber", GcsMain.instance.controller.getReNumber());
                 client.publish("/drone/cam1/gcs",jsonObject.toString().getBytes(),0,false);
                 System.out.println("Test SnapShot Done");
             }
@@ -507,7 +514,20 @@ public class ServiceDialog04Controller implements Initializable {
                 System.out.println(e.getMessage());
             }
         }
+
+        public void sendAlt(){
+            System.out.println("Try Send Alt");
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.put("msgid", "droneAlt");
+            Double altGet = Double.parseDouble(GcsMain.instance.controller.getCurrAlt());
+            jsonObject.put("alt", altGet);
+            try {
+                client.publish("/android/page2", jsonObject.toString().getBytes(), 0, false);
+                System.out.println("Done Send Alt");
+            } catch (MqttException e) {
+                e.printStackTrace();
+            }
+        }
+
     }
-
-
 }
