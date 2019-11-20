@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.scene.image.*?>
 <?import java.lang.*?>
 <?import javafx.scene.text.*?>
 <?import javafx.geometry.*?>
@@ -191,7 +192,11 @@
    <top>
       <HBox alignment="CENTER_LEFT" spacing="10.0" BorderPane.alignment="CENTER">
          <children>
-            <Label alignment="BOTTOM_LEFT" contentDisplay="CENTER" maxWidth="1.7976931348623157E308" text="Ground Control Station">
+            <ImageView fx:id="imgLogo" fitHeight="50.0" fitWidth="200.0" pickOnBounds="true" preserveRatio="true">
+               <image>
+                  <Image url="@image/Logo_gcs.png" />
+               </image></ImageView>
+            <Label alignment="BOTTOM_LEFT" contentDisplay="CENTER" maxWidth="1.7976931348623157E308" prefHeight="39.0" prefWidth="369.0" text="GCS for Smoke Jumpper">
                <font>
                   <Font name="Times New Roman Bold Italic" size="34.0" />
                </font>
