@@ -1245,7 +1245,7 @@ public class GcsMainController implements Initializable {
 		destiObject.put("command",16);
 		destiObject.put("x", destinationLat);
 		destiObject.put("y", destinationLng);
-		destiObject.put("z", 10);
+		destiObject.put("z", 30);
 		destiObject.put("param1", 0);
 		destiObject.put("param2", 0);
 		destiObject.put("param3", 0);
@@ -1260,7 +1260,7 @@ public class GcsMainController implements Initializable {
 		delayObject.put("command",93);
 		delayObject.put("x",destinationLat);
 		delayObject.put("y",destinationLat);
-		delayObject.put("z",10);
+		delayObject.put("z",30);
 		delayObject.put("param1", 10); // 딜레이 되는 시간
 		delayObject.put("param2", 0);
 		delayObject.put("param3", 0);
